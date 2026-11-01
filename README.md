@@ -50,6 +50,7 @@ jobs:
 <p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun/releases/latest"><img src="https://img.shields.io/github/v/release/PramudithaN/git-tulkun?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/PramudithaN/git-tulkun/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/PramudithaN/git-tulkun/ci.yml?style=for-the-badge&label=CI" alt="CI Status" /></a>
+  <a href="https://github.com/PramudithaN/git-tulkun/wiki"><img src="https://img.shields.io/badge/Wiki-Documentation-blue.svg?style=for-the-badge&logo=gitbook&logoColor=white" alt="Wiki Documentation" /></a>
   <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
   <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" />
