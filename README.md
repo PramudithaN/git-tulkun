@@ -16,7 +16,7 @@
 
 ## 🧬 How Commit Evolution Works (`Baby Calf` $\rightarrow$ `Adult Bull`)
 
-Every commit you push to GitHub feeds your Tulkun's anatomical growth. Instead of static spritesheets, **GitTulkun** uses a continuous mathematical spline & signed-distance-field (SDF) engine to morph the whale's proportions, sensor crest, 6 pectoral flippers, *kuru* neural whips, jaw war-stripes, and tail flukes across **5 distinct biological stages**:
+Every January 1st, your Tulkun **resets to its Baby Calf form** and grows throughout the calendar year according to your annual contribution rate (`summarize_calendar` filters contributions to `observed_on.year_ce()`). Instead of static spritesheets, **GitTulkun** uses a continuous mathematical spline & signed-distance-field (SDF) engine to morph the whale's proportions, sensor crest, 6 pectoral flippers, *kuru* neural whips, jaw war-stripes, and tail flukes across **5 distinct biological stages**:
 
 | Stage | Commits Needed | Live 15 FPS Animation | Biological Changes Unlocked |
 | :--- | :---: | :---: | :--- |
@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Tulkun GIF & PNG
-        uses: PramudithaN/git-tulkun@v0.1.4
+        uses: PramudithaN/git-tulkun@v0.1.5
         with:
           login: ${{ github.repository_owner }}
           view: side        # Options: side | dive | top

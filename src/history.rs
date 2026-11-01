@@ -65,7 +65,9 @@ pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (
         if day.date > observed_on {
             continue;
         }
-        total += u64::from(day.count);
+        if day.date.year_ce() == observed_on.year_ce() {
+            total += u64::from(day.count);
+        }
         if day.date.year_ce() == observed_on.year_ce() && day.date.month0() == observed_on.month0() {
             monthly += u64::from(day.count);
         }

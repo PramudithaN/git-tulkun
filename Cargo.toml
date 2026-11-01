@@ -1,6 +1,6 @@
 [package]
 name = "git-tulkun"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Draw a procedural pixel-art Pandoran Tulkun whale from a GitHub account's commits and language colors, as a looping GIF for a profile README."
 license = "MIT"
