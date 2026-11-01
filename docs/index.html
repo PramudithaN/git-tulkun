@@ -191,6 +191,15 @@
       ' ': [0b000, 0b000, 0b000, 0b000, 0b000]
     };
 
+    function hashColor(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      const r = (hash & 0xFF0000) >> 16;
+      const g = (hash & 0x00FF00) >> 8;
+      const b = hash & 0x0000FF;
+      return [Math.max(40, r % 230), Math.max(40, g % 230), Math.max(40, b % 230)];
+    }
+
     const LANG_COLORS = {
       TypeScript: [49, 120, 198],
       JavaScript: [241, 224, 90],
@@ -699,19 +708,22 @@ jobs:
 
         let c1 = [49, 120, 198], c2 = [222, 165, 132], c3 = [53, 114, 165];
         let repoFallbackCommits = 85;
+        let topLanguages = [];
 
         if (reposRes && reposRes.ok) {
           const repos = await reposRes.json();
           const counts = {};
           for (const r of repos) {
-            if (r.language && LANG_COLORS[r.language]) {
+            if (r.language) {
               counts[r.language] = (counts[r.language] || 0) + 1;
             }
           }
-          const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-          c1 = LANG_COLORS[top[0]] || c1;
-          c2 = LANG_COLORS[top[1]] || c2;
-          c3 = LANG_COLORS[top[2]] || c3;
+          topLanguages = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+          if (topLanguages.length > 0) {
+            c1 = LANG_COLORS[topLanguages[0]] || hashColor(topLanguages[0]);
+            c2 = (topLanguages.length > 1 && LANG_COLORS[topLanguages[1]]) ? LANG_COLORS[topLanguages[1]] : (topLanguages.length > 1 ? hashColor(topLanguages[1]) : c1);
+            c3 = (topLanguages.length > 2 && LANG_COLORS[topLanguages[2]]) ? LANG_COLORS[topLanguages[2]] : (topLanguages.length > 2 ? hashColor(topLanguages[2]) : c2);
+          }
           repoFallbackCommits = Math.max(40, repos.length * 18);
         }
 
@@ -724,9 +736,10 @@ jobs:
         }
 
         const langList = [];
-        if (top && top.length > 0) {
-          for (const lName of top.slice(0, 3)) {
-            langList.push({ name: lName, color: LANG_COLORS[lName] || [49, 120, 198] });
+        if (topLanguages.length > 0) {
+          for (const lName of topLanguages.slice(0, 3)) {
+            const col = LANG_COLORS[lName] || hashColor(lName);
+            langList.push({ name: lName, color: col });
           }
         } else {
           langList.push({ name: "TypeScript", color: c1 }, { name: "Rust", color: c2 }, { name: "Python", color: c3 });
