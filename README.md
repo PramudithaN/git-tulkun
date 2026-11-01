@@ -83,11 +83,11 @@ On **January 1st** of every calendar year, your Tulkun resets to its **Stage 1 B
 
 | Stage | Current-Year Contributions | Live 15 FPS Animation | Anatomical Changes Unlocked |
 | :--- | :---: | :---: | :--- |
-| **Stage 1**<br/>**Baby Calf** | **`1 – 14`**<br/>contributions | <img src="docs/stage1-calf/tulkun.gif?v=7" width="320" alt="Stage 1 Baby Calf" /> | Compact `64px` spine, blunt teal-blue snout with a flat oval sensor dimple, light cream dorsal swirl patches, bright cream belly, and stubby fins with pale cream tail flukes. |
-| **Stage 2**<br/>**Yearling Calf** | **`15 – 39`**<br/>contributions | <img src="docs/stage2-yearling/tulkun.gif?v=7" width="320" alt="Stage 2 Yearling Calf" /> | Spine lengthens (`95px`) and slims down; *kuru* neural whips sprout behind the anterior opercular flippers while tail flukes begin darkening at the base. |
-| **Stage 3**<br/>**Adolescent** | **`40 – 74`**<br/>contributions | <img src="docs/stage3-adolescent/tulkun.gif?v=7" width="320" alt="Stage 3 Adolescent" /> | Sensor crest rises and slopes forward; all 6 pectoral and ventral flippers elongate with crisp white leading edges, and secondary pelvic accessory paddles widen under the tail stock. |
-| **Stage 4**<br/>**Adult Female** | **`75 – 114`**<br/>contributions | <img src="docs/stage4-female/tulkun.gif?v=7" width="320" alt="Stage 4 Adult Female" /> | Dark charcoal carapace armor replaces the pale calf dorsal patches; forward-jutting sloped maroon sensor crest with an olive-gold front tip, 5 sharp sawtooth jaw triangles, and segmented cerulean tail pleats. |
-| **Stage 5**<br/>**Adult Male Bull** | **`115+`**<br/>contributions | <img src="docs/stage5-bull/tulkun.gif?v=7" width="320" alt="Stage 5 Adult Male Bull" /> | Maximum `186px` leviathan length and full scythe-wing span; towering vertical hooked hammer-crest with concave rear overhang, 6 serrated jaw triangles, and white carapace battle-scars. |
+| **Stage 1**<br/>**Baby Calf** | **`1 – 99`**<br/>contributions | <img src="docs/stage1-calf/tulkun.gif?v=8" width="320" alt="Stage 1 Baby Calf" /> | Compact `64px` spine, blunt teal-blue snout with a flat oval sensor dimple, light cream dorsal swirl patches, bright cream belly, and stubby fins with pale cream tail flukes. |
+| **Stage 2**<br/>**Yearling Calf** | **`100 – 249`**<br/>contributions | <img src="docs/stage2-yearling/tulkun.gif?v=8" width="320" alt="Stage 2 Yearling Calf" /> | Spine lengthens (`95px`) and slims down; *kuru* neural whips sprout behind the anterior opercular flippers while tail flukes begin darkening at the base. |
+| **Stage 3**<br/>**Adolescent** | **`250 – 499`**<br/>contributions | <img src="docs/stage3-adolescent/tulkun.gif?v=8" width="320" alt="Stage 3 Adolescent" /> | Sensor crest rises and slopes forward; all 6 pectoral and ventral flippers elongate with crisp white leading edges, and secondary pelvic accessory paddles widen under the tail stock. |
+| **Stage 4**<br/>**Adult Female** | **`500 – 999`**<br/>contributions | <img src="docs/stage4-female/tulkun.gif?v=8" width="320" alt="Stage 4 Adult Female" /> | Dark charcoal carapace armor replaces the pale calf dorsal patches; forward-jutting sloped maroon sensor crest with an olive-gold front tip, 5 sharp sawtooth jaw triangles, and segmented cerulean tail pleats. |
+| **Stage 5**<br/>**Adult Male Bull** | **`1,000+`**<br/>contributions | <img src="docs/stage5-bull/tulkun.gif?v=8" width="320" alt="Stage 5 Adult Male Bull" /> | Maximum `186px` leviathan length and full scythe-wing span; towering vertical hooked hammer-crest with concave rear overhang, 6 serrated jaw triangles, and white carapace battle-scars. |
 
 ---
 
@@ -146,9 +146,9 @@ cargo run --release -- collect <GITHUB_USERNAME> --output snapshot.json
 cargo run --release -- render snapshot.json --output-dir tulkun --view side
 
 # 3. Demo mode (preview any contribution count without GitHub authentication)
-cargo run --release -- demo --commits 6   --output-dir tulkun-calf
-cargo run --release -- demo --commits 60  --output-dir tulkun-adolescent
-cargo run --release -- demo --commits 145 --output-dir tulkun-bull --view dive
+cargo run --release -- demo --commits 45   --output-dir tulkun-calf
+cargo run --release -- demo --commits 350  --output-dir tulkun-adolescent
+cargo run --release -- demo --commits 1100 --output-dir tulkun-bull --view dive
 ```
 
 ---

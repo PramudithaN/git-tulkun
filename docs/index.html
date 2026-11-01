@@ -251,10 +251,10 @@
     }
 
     function getBio(commits) {
-      const g = Math.min(1.0, Math.pow(commits / 145.0, 0.60));
-      const maturity = smoothStep((g - 0.08) / 0.92);
-      const femalePhase = smoothStep((g - 0.30) / 0.40);
-      const bullPhase = smoothStep((g - 0.68) / 0.32);
+      const g = Math.min(1.0, Math.pow(commits / 1200.0, 0.55));
+      const maturity = smoothStep((g - 0.08) / 0.88);
+      const femalePhase = smoothStep((g - 0.35) / 0.38);
+      const bullPhase = smoothStep((g - 0.72) / 0.26);
       const bodyLen = lerp(64.0, 186.0, g);
       const maxRadius = bodyLen * lerp(0.165, 0.115, maturity);
       return {
@@ -266,10 +266,10 @@
     }
 
     function getStageTitle(c) {
-      if (c >= 115) return "Stage 5: Adult Male Bull";
-      if (c >= 75) return "Stage 4: Adult Female";
-      if (c >= 40) return "Stage 3: Adolescent Tulkun";
-      if (c >= 15) return "Stage 2: Yearling Calf";
+      if (c >= 1000) return "Stage 5: Adult Male Bull";
+      if (c >= 500) return "Stage 4: Adult Female";
+      if (c >= 250) return "Stage 3: Adolescent Tulkun";
+      if (c >= 100) return "Stage 2: Yearling Calf";
       return "Stage 1: Baby Tulkun Calf";
     }
 
@@ -587,10 +587,10 @@
     }
 
     let primaryUser = "PramudithaN";
-    let primaryCommits = 140;
+    let primaryCommits = 1072;
     let primaryCoat = buildCoatFromColors();
     let friendUser = "";
-    let friendCommits = 62;
+    let friendCommits = 350;
     let friendCoat = buildCoatFromColors([222, 165, 132], [49, 120, 198], [65, 184, 131]);
     let phase = 0;
 
@@ -681,7 +681,7 @@ jobs:
           c1 = LANG_COLORS[top[0]] || c1;
           c2 = LANG_COLORS[top[1]] || c2;
           c3 = LANG_COLORS[top[2]] || c3;
-          repoFallbackCommits = Math.max(14, repos.length * 5);
+          repoFallbackCommits = Math.max(40, repos.length * 18);
         }
 
         let actualCommits = repoFallbackCommits;
@@ -788,7 +788,7 @@ jobs:
 
       // Bottom-right stage progression indicator
       const stages = ["1. Calf", "2. Yearling", "3. Adolescent", "4. Female", "5. Bull"];
-      const activeIdx = primaryCommits >= 115 ? 4 : primaryCommits >= 75 ? 3 : primaryCommits >= 40 ? 2 : primaryCommits >= 15 ? 1 : 0;
+      const activeIdx = primaryCommits >= 1000 ? 4 : primaryCommits >= 500 ? 3 : primaryCommits >= 250 ? 2 : primaryCommits >= 100 ? 1 : 0;
       let sx = 640;
       sctx.font = "bold 17px monospace";
       for (let i = 0; i < stages.length; i++) {

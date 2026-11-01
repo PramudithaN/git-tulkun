@@ -64,13 +64,13 @@ pub struct TulkunBiology {
 }
 
 impl TulkunBiology {
-    /// Compute Tulkun life-stage proportions from contribution count.
-    /// `1..15` = Baby Calf, `15..40` = Yearling, `40..75` = Adolescent, `75..115` = Adult Female, `115+` = Adult Male Bull.
+    /// Compute Tulkun annual life-stage proportions from current-year contribution count.
+    /// `1..100` = Baby Calf, `100..250` = Yearling, `250..500` = Adolescent, `500..1000` = Adult Female, `1000+` = Adult Male Bull.
     pub fn from_commits(commits: u64) -> Self {
-        let g = (commits as f64 / 145.0).powf(0.60).min(1.0);
-        let maturity = smooth_step((g - 0.08) / 0.92);
-        let female_phase = smooth_step((g - 0.30) / 0.40);
-        let bull_phase = smooth_step((g - 0.68) / 0.32);
+        let g = (commits as f64 / 1200.0).powf(0.55).min(1.0);
+        let maturity = smooth_step((g - 0.08) / 0.88);
+        let female_phase = smooth_step((g - 0.35) / 0.38);
+        let bull_phase = smooth_step((g - 0.72) / 0.26);
 
         let body_len = lerp(64.0, 186.0, g);
         let fatness_ratio = lerp(0.165, 0.115, maturity);
@@ -91,13 +91,13 @@ impl TulkunBiology {
     }
 
     pub fn stage_name(&self) -> &'static str {
-        if self.commits >= 115 {
+        if self.commits >= 1000 {
             "Adult Male Bull (Hooked Hammer-Crest)"
-        } else if self.commits >= 75 {
+        } else if self.commits >= 500 {
             "Adult Female (Sloped Sensor Crest)"
-        } else if self.commits >= 40 {
+        } else if self.commits >= 250 {
             "Adolescent Tulkun"
-        } else if self.commits >= 15 {
+        } else if self.commits >= 100 {
             "Yearling Calf (Kuru Active)"
         } else {
             "Baby Tulkun Calf"
@@ -1029,13 +1029,13 @@ pub fn render_share_card_frame(
     let bio = TulkunBiology::from_commits(effective_commits);
 
     draw_pixel_string(&mut pixels, w, h, 9, 9, "GIT-TULKUN", coat.cream[3]);
-    let stage_short = if bio.commits >= 115 {
+    let stage_short = if bio.commits >= 1000 {
         "STAGE 5: ADULT BULL"
-    } else if bio.commits >= 75 {
+    } else if bio.commits >= 500 {
         "STAGE 4: ADULT FEMALE"
-    } else if bio.commits >= 40 {
+    } else if bio.commits >= 250 {
         "STAGE 3: ADOLESCENT"
-    } else if bio.commits >= 15 {
+    } else if bio.commits >= 100 {
         "STAGE 2: YEARLING CALF"
     } else {
         "STAGE 1: BABY CALF"
@@ -1060,13 +1060,13 @@ pub fn render_share_card_frame(
 
     // Bottom-right 5-stage evolution progress pills
     let stages = ["1.CALF", "2.YRLG", "3.ADOL", "4.FEM", "5.BULL"];
-    let active_idx = if bio.commits >= 115 {
+    let active_idx = if bio.commits >= 1000 {
         4
-    } else if bio.commits >= 75 {
+    } else if bio.commits >= 500 {
         3
-    } else if bio.commits >= 40 {
+    } else if bio.commits >= 250 {
         2
-    } else if bio.commits >= 15 {
+    } else if bio.commits >= 100 {
         1
     } else {
         0

@@ -100,7 +100,7 @@ fn run_cli(args: &[String]) -> Result<(), String> {
             render_to_directory(&snapshot, &output_dir, view, canon_only)
         }
         "demo" => {
-            let mut commits = 140_u64;
+            let mut commits = 1100_u64;
             let mut output_dir = PathBuf::from("tulkun");
             let mut view = CameraView::Side;
             let mut canon_only = false;
