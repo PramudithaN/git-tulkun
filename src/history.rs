@@ -1,0 +1,97 @@
+//! Account snapshot and language share models.
+
+use std::collections::BTreeMap;
+use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+
+/// One language observed in a user's public repositories along with its GitHub hex color.
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct LanguageShare {
+    /// Language name (e.g., `"Rust"`, `"TypeScript"`).
+    pub name: String,
+    /// GitHub hex color string (e.g., `"#dea584"` or `"#3178c6"`).
+    pub hex_color: String,
+    /// Number of repositories or weight where this language is primary.
+    pub repo_count: u32,
+}
+
+/// One day of GitHub contribution activity.
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct ContributionDay {
+    pub date: NaiveDate,
+    pub count: u32,
+}
+
+/// Complete snapshot of a GitHub user's public activity used to render the Tulkun.
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct AccountSnapshot {
+    pub login: String,
+    pub account_id: u64,
+    pub observed_on: NaiveDate,
+    /// Total contributions across the observed window (drives Tulkun growth from Calf to Bull).
+    pub total_contributions: u64,
+    /// Contributions made in the current calendar month.
+    pub monthly_contributions: u64,
+    /// Current daily contribution streak.
+    pub current_streak: u32,
+    /// Longest daily contribution streak.
+    pub longest_streak: u32,
+    /// Top languages ranked by repository share.
+    pub languages: Vec<LanguageShare>,
+}
+
+impl AccountSnapshot {
+    /// Build a deterministic seed from the account ID and login.
+    pub fn identity_seed(&self) -> u64 {
+        let mut h = self.account_id ^ 0x9e37_79b9_7f4a_7c15;
+        for b in self.login.bytes() {
+            h = (h ^ u64::from(b)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        }
+        h
+    }
+}
+
+/// Summarize daily contributions into total, current month, current streak, and longest streak.
+pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (u64, u64, u32, u32) {
+    let mut sorted = days.to_vec();
+    sorted.sort_by_key(|d| d.date);
+
+    let mut total = 0_u64;
+    let mut monthly = 0_u64;
+    let mut current_streak = 0_u32;
+    let mut longest_streak = 0_u32;
+
+    for day in &sorted {
+        if day.date > observed_on {
+            continue;
+        }
+        total += u64::from(day.count);
+        if day.date.year_ce() == observed_on.year_ce() && day.date.month0() == observed_on.month0() {
+            monthly += u64::from(day.count);
+        }
+        if day.count > 0 {
+            current_streak += 1;
+            longest_streak = longest_streak.max(current_streak);
+        } else {
+            current_streak = 0;
+        }
+    }
+
+    (total, monthly, current_streak, longest_streak)
+}
+
+use chrono::Datelike;
+
+/// Aggregate repository languages and rank from highest share to lowest.
+pub fn rank_languages(raw_counts: BTreeMap<String, (String, u32)>) -> Vec<LanguageShare> {
+    let mut list: Vec<LanguageShare> = raw_counts
+        .into_iter()
+        .map(|(name, (hex_color, repo_count))| LanguageShare {
+            name,
+            hex_color,
+            repo_count,
+        })
+        .collect();
+    list.sort_by(|a, b| b.repo_count.cmp(&a.repo_count).then_with(|| a.name.cmp(&b.name)));
+    list
+}

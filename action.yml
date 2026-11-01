@@ -1,0 +1,77 @@
+name: git-profile-tulkun
+description:
+  Draw a GitHub account's procedural pixel-art Tulkun whale from its commits and
+  language colors as a looping GIF, a still PNG, and a preview, for a profile README.
+branding:
+  icon: anchor
+  color: blue
+
+inputs:
+  login:
+    description: GitHub account whose Tulkun to draw.
+    default: ${{ github.repository_owner }}
+  view:
+    description: Camera angle, one of side, dive, or top.
+    default: side
+  canon:
+    description: Set to 'true' to use canon Pandoran colors instead of GitHub language colors.
+    default: "false"
+  output-dir:
+    description: Folder, relative to the workspace, that receives tulkun.gif, tulkun.png, and preview.html.
+    default: tulkun
+  token:
+    description: Token for reading the account's public data; the built-in token is enough.
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install or build git-tulkun binary
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        version=$(grep -m1 '^version' "$GITHUB_ACTION_PATH/Cargo.toml" | cut -d'"' -f2)
+        repo="${GITHUB_ACTION_REPOSITORY:-PramudithaN/git-tulkun}"
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)   target="x86_64-unknown-linux-gnu" ;;
+          macOS-ARM64) target="aarch64-apple-darwin" ;;
+          *)           target="" ;;
+        esac
+
+        install_dir="$RUNNER_TEMP/git-tulkun-bin"
+        mkdir -p "$install_dir"
+
+        if [ -n "$target" ] && gh release download "v$version" --repo "$repo" --dir "$install_dir" \
+            --pattern "git-tulkun-$version-$target.tar.gz" 2>/dev/null; then
+          echo "Downloaded pre-built git-tulkun v$version for $target"
+          tar -xzf "$install_dir/git-tulkun-$version-$target.tar.gz" -C "$install_dir"
+          echo "$install_dir/git-tulkun-$version-$target" >> "$GITHUB_PATH"
+        else
+          echo "No pre-built release asset found; compiling git-tulkun from source..."
+          cargo build --release --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml"
+          echo "$GITHUB_ACTION_PATH/target/release" >> "$GITHUB_PATH"
+        fi
+
+    - name: Collect the account snapshot
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TULKUN_LOGIN: ${{ inputs.login }}
+      run: |
+        git-tulkun collect "$TULKUN_LOGIN" --output "$RUNNER_TEMP/tulkun-snapshot.json"
+
+    - name: Render the Tulkun
+      shell: bash
+      env:
+        TULKUN_VIEW: ${{ inputs.view }}
+        TULKUN_CANON: ${{ inputs.canon }}
+        TULKUN_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        extra_flags=""
+        if [ "$TULKUN_CANON" = "true" ]; then
+          extra_flags="--canon"
+        fi
+        git-tulkun render "$RUNNER_TEMP/tulkun-snapshot.json" \
+          --output-dir "$TULKUN_OUTPUT_DIR" \
+          --view "$TULKUN_VIEW" $extra_flags

@@ -1,0 +1,9 @@
+/target
+/tulkun
+*.tmp
+snapshot.json
+
+# AI Agent rule & template files (per-repo local generated)
+AGENTS.md
+GEMINI.md
+templates/
