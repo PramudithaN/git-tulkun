@@ -69,7 +69,7 @@ flowchart LR
    - **75-Frame Deep-Ocean Glide (5.0s Loop at 15 FPS)**: Massive cetaceans move with slow, weighty grace. A single-harmonic traveling wave glides gently from chest to tail peduncle without erratic vertical bounce:
      $$\Delta y(u, t) = A_{\text{bob}}\sin(\omega t)(1 - u) + A_{\text{tail}}\sin(1.45\pi u - \omega t)\,u^{1.45}$$
    - **Rest-Pose Camera Stabilization**: Camera framing is locked to the Tulkun's resting pose (`loop_turn = 0.0`) so flapping flippers never shift the camera center.
-   - **Bottom-Left Pixel-Art Metrics HUD**: Every rendered GIF and PNG displays a crisp `3×5` outlined pixel-art badge in the bottom-left corner showing **`WHALE: TULKEN`** alongside your live **`CONTRIBUTIONS: <count>`**.
+   - **Bottom-Left Pixel-Art Metrics HUD**: Every rendered GIF and PNG displays a crisp `3×5` outlined pixel-art badge in the bottom-left corner showing **`AVATAR: TULKEN`** alongside your live GitHub **`CONTRIBUTIONS: <count>`**.
 
 ---
 
@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Tulkun GIF & PNG
-        uses: PramudithaN/git-tulkun@v0.1.1
+        uses: PramudithaN/git-tulkun@v0.1.2
         with:
           login: ${{ github.repository_owner }}
           view: side        # Options: side | dive | top
