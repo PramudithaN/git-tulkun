@@ -47,28 +47,13 @@
       </div>
     </header>
 
-    <!-- Controls Bar (3 Clean Columns, No Camera Perspective Selector) -->
-    <section class="card p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Controls Bar (2 Clean Columns: GitHub Username & Compare With a Friend) -->
+    <section class="card p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="text-xs font-semibold text-[#8b949e] block mb-1.5">GitHub Username</label>
         <div class="flex gap-2">
           <input id="userInput" type="text" value="PramudithaN" placeholder="e.g. PramudithaN" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
-          <button id="fetchUserBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:bg-[#388bfd] transition">Load</button>
-        </div>
-      </div>
-
-      <div>
-        <div class="flex items-center justify-between text-xs font-semibold mb-1.5">
-          <span class="text-[#8b949e]">Annual Contributions: <strong id="commitReadout" class="text-white">140</strong></span>
-          <span id="stageBadge" class="text-[#58a6ff]">Stage 5: Adult Male Bull</span>
-        </div>
-        <input id="commitSlider" type="range" min="1" max="150" value="140" class="w-full accent-[#1f6feb] cursor-pointer mt-1" />
-        <div class="flex justify-between text-[11px] text-[#8b949e] mt-0.5">
-          <span>1 (Calf)</span>
-          <span>25 (Yearling)</span>
-          <span>55 (Adolescent)</span>
-          <span>90 (Female)</span>
-          <span>115+ (Bull)</span>
+          <button id="fetchUserBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:bg-[#388bfd] transition whitespace-nowrap">Load Avatar</button>
         </div>
       </div>
 
@@ -76,7 +61,7 @@
         <label class="text-xs font-semibold text-[#8b949e] block mb-1.5">Compare With a Friend (Optional)</label>
         <div class="flex gap-2">
           <input id="friendInput" type="text" placeholder="Friend's GitHub username" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
-          <button id="compareBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition">Compare</button>
+          <button id="compareBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition whitespace-nowrap">Compare</button>
         </div>
       </div>
     </section>
@@ -91,7 +76,11 @@
           </div>
           <span class="text-[#8b949e] font-mono">1280x560 High-Resolution 4x Pixel Art • Resets Jan 1st</span>
         </div>
-        <div class="rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center">
+        <div class="relative rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center min-h-[220px] items-center">
+          <div id="primaryLoader" class="absolute inset-0 rounded-xl bg-[#0d1117]/95 flex flex-col items-center justify-center gap-3 z-10 transition-opacity duration-200">
+            <div class="w-8 h-8 rounded-full border-2 border-[#30363d] border-t-[#58a6ff] animate-spin"></div>
+            <span id="primaryLoaderText" class="text-xs font-medium text-[#8b949e]">Loading @PramudithaN's Tulkun avatar...</span>
+          </div>
           <canvas id="mainCanvas" width="1280" height="560" class="w-full max-w-[820px] h-auto"></canvas>
         </div>
       </div>
@@ -104,7 +93,11 @@
           </div>
           <button id="closeCompareBtn" class="text-[#8b949e] hover:text-white">Close Comparison</button>
         </div>
-        <div class="rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center">
+        <div class="relative rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center min-h-[220px] items-center">
+          <div id="friendLoader" class="absolute inset-0 rounded-xl bg-[#0d1117]/95 flex flex-col items-center justify-center gap-3 z-10 hidden">
+            <div class="w-8 h-8 rounded-full border-2 border-[#30363d] border-t-[#58a6ff] animate-spin"></div>
+            <span id="friendLoaderText" class="text-xs font-medium text-[#8b949e]">Loading friend's Tulkun avatar...</span>
+          </div>
           <canvas id="friendCanvas" width="1280" height="560" class="w-full max-w-[820px] h-auto"></canvas>
         </div>
       </div>
@@ -633,61 +626,113 @@ jobs:
 
       document.getElementById("yamlCode").textContent = yaml;
       document.getElementById("mdCode").textContent = md;
-      document.getElementById("stageBadge").textContent = getStageTitle(primaryCommits);
       document.getElementById("primaryCaption").textContent = `@${primaryUser} (${getStageTitle(primaryCommits)} • ${primaryCommits} contributions)`;
     }
 
+    function setLoaderVisible(isFriend, visible, login = "") {
+      const loader = document.getElementById(isFriend ? "friendLoader" : "primaryLoader");
+      const textEl = document.getElementById(isFriend ? "friendLoaderText" : "primaryLoaderText");
+      const btn = document.getElementById(isFriend ? "compareBtn" : "fetchUserBtn");
+      if (login && textEl) {
+        textEl.textContent = `Loading @${login}'s GitHub activity and rendering Tulkun...`;
+      }
+      if (visible) {
+        loader.classList.remove("hidden");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Loading...";
+        }
+      } else {
+        loader.classList.add("hidden");
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = isFriend ? "Compare" : "Load Avatar";
+        }
+      }
+    }
+
     async function fetchGitHubProfile(login, isFriend = false) {
+      if (isFriend) {
+        document.getElementById("friendCard").classList.remove("hidden");
+        document.getElementById("canvasGrid").className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+      }
+      setLoaderVisible(isFriend, true, login);
+      const minDelay = new Promise(resolve => setTimeout(resolve, 420));
       try {
-        const res = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}/repos?per_page=30&sort=updated`);
-        if (!res.ok) return;
-        const repos = await res.json();
-        const counts = {};
-        for (const r of repos) {
-          if (r.language && LANG_COLORS[r.language]) {
-            counts[r.language] = (counts[r.language] || 0) + 1;
+        const currentYear = new Date().getFullYear();
+        const [reposRes, contribRes] = await Promise.all([
+          fetch(`https://api.github.com/users/${encodeURIComponent(login)}/repos?per_page=30&sort=updated`).catch(() => null),
+          fetch(`https://github-contributions-api.jogruber.de/v4/${encodeURIComponent(login)}?y=${currentYear}`).catch(() => null),
+          minDelay
+        ]);
+
+        let c1 = [49, 120, 198], c2 = [222, 165, 132], c3 = [53, 114, 165];
+        let repoFallbackCommits = 85;
+
+        if (reposRes && reposRes.ok) {
+          const repos = await reposRes.json();
+          const counts = {};
+          for (const r of repos) {
+            if (r.language && LANG_COLORS[r.language]) {
+              counts[r.language] = (counts[r.language] || 0) + 1;
+            }
+          }
+          const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+          c1 = LANG_COLORS[top[0]] || c1;
+          c2 = LANG_COLORS[top[1]] || c2;
+          c3 = LANG_COLORS[top[2]] || c3;
+          repoFallbackCommits = Math.max(14, repos.length * 5);
+        }
+
+        let actualCommits = repoFallbackCommits;
+        if (contribRes && contribRes.ok) {
+          const contribJson = await contribRes.json();
+          if (contribJson && contribJson.total && typeof contribJson.total[currentYear] === "number") {
+            actualCommits = Math.max(1, contribJson.total[currentYear]);
           }
         }
-        const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-        const c1 = LANG_COLORS[top[0]] || [49, 120, 198];
-        const c2 = LANG_COLORS[top[1]] || [222, 165, 132];
-        const c3 = LANG_COLORS[top[2]] || [53, 114, 165];
-        const estCommits = Math.min(150, Math.max(14, repos.length * 4));
+
         if (isFriend) {
           friendUser = login;
-          friendCommits = estCommits;
+          friendCommits = actualCommits;
           friendCoat = buildCoatFromColors(c1, c2, c3);
-          document.getElementById("friendCaption").textContent = `@${friendUser} (${getStageTitle(friendCommits)} • ~${friendCommits} contributions)`;
-          document.getElementById("friendCard").classList.remove("hidden");
-          document.getElementById("canvasGrid").className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+          document.getElementById("friendCaption").textContent = `@${friendUser} (${getStageTitle(friendCommits)} • ${friendCommits} contributions)`;
         } else {
           primaryUser = login;
-          primaryCommits = estCommits;
+          primaryCommits = actualCommits;
           primaryCoat = buildCoatFromColors(c1, c2, c3);
-          document.getElementById("commitSlider").value = primaryCommits;
-          document.getElementById("commitReadout").textContent = primaryCommits;
           updateSnippets();
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        setLoaderVisible(isFriend, false);
+      }
     }
 
     document.getElementById("fetchUserBtn").addEventListener("click", () => {
       const u = document.getElementById("userInput").value.trim();
       if (u) fetchGitHubProfile(u, false);
     });
+    document.getElementById("userInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const u = document.getElementById("userInput").value.trim();
+        if (u) fetchGitHubProfile(u, false);
+      }
+    });
     document.getElementById("compareBtn").addEventListener("click", () => {
       const f = document.getElementById("friendInput").value.trim();
       if (f) fetchGitHubProfile(f, true);
+    });
+    document.getElementById("friendInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const f = document.getElementById("friendInput").value.trim();
+        if (f) fetchGitHubProfile(f, true);
+      }
     });
     document.getElementById("closeCompareBtn").addEventListener("click", () => {
       friendUser = "";
       document.getElementById("friendCard").classList.add("hidden");
       document.getElementById("canvasGrid").className = "grid grid-cols-1 gap-4";
-    });
-    document.getElementById("commitSlider").addEventListener("input", (e) => {
-      primaryCommits = parseInt(e.target.value, 10);
-      document.getElementById("commitReadout").textContent = primaryCommits;
-      updateSnippets();
     });
     document.getElementById("copyYamlBtn").addEventListener("click", (e) => {
       navigator.clipboard.writeText(document.getElementById("yamlCode").textContent);
@@ -768,6 +813,7 @@ jobs:
     }
 
     updateSnippets();
+    fetchGitHubProfile("PramudithaN", false);
     animate();
   </script>
 </body>
