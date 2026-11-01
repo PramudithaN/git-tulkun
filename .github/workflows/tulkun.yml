@@ -15,23 +15,9 @@ jobs:
   update-tulkun:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Collect GitHub activity & Render Tulkun GIF
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cargo run --release -- collect "${{ github.repository_owner }}" --output snapshot.json
-          cargo run --release -- render snapshot.json --output-dir tulkun --view side
-
-      - name: Commit updated tulkun.gif to repository
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tulkun/tulkun.gif tulkun/tulkun.png tulkun/share-card.png tulkun/preview.html
-          git diff --cached --quiet || git commit -m "chore: update Tulkun from latest GitHub activity"
-          git push
+      - uses: PramudithaN/git-tulkun@v1
+        with:
+          view: side
+          window: annual
+          commit: "true"
+          branch: output

@@ -1,9 +1,9 @@
 //! CLI entrypoint for `git-tulkun`.
 //!
 //! Commands:
-//! - `git-tulkun collect <login> [--output snapshot.json]`
+//! - `git-tulkun collect <login> [--window annual|rolling] [--output snapshot.json]`
 //! - `git-tulkun render <snapshot.json> [--output-dir tulkun] [--view side|dive|top] [--canon]`
-//! - `git-tulkun demo [--commits 140] [--output-dir tulkun] [--view side|dive|top]`
+//! - `git-tulkun demo [--commits 2800] [--output-dir tulkun] [--view side|dive|top] [--canon]`
 
 use std::env;
 use std::fs;
@@ -12,8 +12,8 @@ use std::process::ExitCode;
 
 use chrono::NaiveDate;
 use git_tulkun::coat::TulkunCoat;
-use git_tulkun::collect::collect_account_snapshot;
-use git_tulkun::history::{AccountSnapshot, LanguageShare};
+use git_tulkun::collect::collect_account_snapshot_with_window;
+use git_tulkun::history::{AccountSnapshot, ContributionWindow, LanguageShare};
 use git_tulkun::output::{encode_gif, encode_png, encode_preview_html, encode_share_card_png};
 use git_tulkun::render::{
     CameraView, LOOP_FRAME_COUNT, TulkunBiology, TulkunFrame, render_share_card_frame,
@@ -42,6 +42,7 @@ fn run_cli(args: &[String]) -> Result<(), String> {
                 .get(1)
                 .ok_or_else(|| "missing <login> for `collect`".to_owned())?;
             let mut output_path: Option<PathBuf> = None;
+            let mut window = ContributionWindow::Annual;
             let mut i = 2;
             while i < args.len() {
                 match args[i].as_str() {
@@ -50,10 +51,15 @@ fn run_cli(args: &[String]) -> Result<(), String> {
                         output_path = Some(PathBuf::from(p));
                         i += 2;
                     }
+                    "--window" | "-w" => {
+                        let w = args.get(i + 1).ok_or("missing window after --window")?;
+                        window = parse_window(w)?;
+                        i += 2;
+                    }
                     other => return Err(format!("unknown option `{other}`")),
                 }
             }
-            let snapshot = collect_account_snapshot(login)?;
+            let snapshot = collect_account_snapshot_with_window(login, window)?;
             let json = serde_json::to_string_pretty(&snapshot).map_err(|e| e.to_string())?;
             if let Some(path) = output_path {
                 fs::write(&path, format!("{json}\n"))
@@ -100,7 +106,7 @@ fn run_cli(args: &[String]) -> Result<(), String> {
             render_to_directory(&snapshot, &output_dir, view, canon_only)
         }
         "demo" => {
-            let mut commits = 1100_u64;
+            let mut commits = 2800_u64;
             let mut output_dir = PathBuf::from("tulkun");
             let mut view = CameraView::Side;
             let mut canon_only = false;
@@ -172,6 +178,16 @@ fn parse_view(s: &str) -> Result<CameraView, String> {
     }
 }
 
+fn parse_window(s: &str) -> Result<ContributionWindow, String> {
+    match s.to_lowercase().as_str() {
+        "annual" | "year" => Ok(ContributionWindow::Annual),
+        "rolling" | "rolling365" | "365" => Ok(ContributionWindow::Rolling365),
+        _ => Err(format!(
+            "unknown window `{s}` (expected `annual` or `rolling`)"
+        )),
+    }
+}
+
 fn render_to_directory(
     snapshot: &AccountSnapshot,
     output_dir: &Path,
@@ -190,11 +206,10 @@ fn render_to_directory(
     let bio = TulkunBiology::from_commits(
         snapshot
             .total_contributions
-            .max(snapshot.monthly_contributions)
-            .max(1),
+            .max(snapshot.monthly_contributions),
     );
     let caption = format!(
-        "@{} — {} ({} commits)",
+        "@{} - {} ({} contributions)",
         snapshot.login,
         bio.stage_name(),
         bio.commits
@@ -226,8 +241,8 @@ fn render_to_directory(
 
 fn usage_text() -> String {
     "Usage:\n  \
-     git-tulkun collect <login> [--output snapshot.json]\n  \
+     git-tulkun collect <login> [--window annual|rolling] [--output snapshot.json]\n  \
      git-tulkun render <snapshot.json> [--output-dir tulkun] [--view side|dive|top] [--canon]\n  \
-     git-tulkun demo [--commits 140] [--output-dir tulkun] [--view side|dive|top] [--canon]"
+     git-tulkun demo [--commits 2800] [--output-dir tulkun] [--view side|dive|top] [--canon]"
         .to_owned()
 }

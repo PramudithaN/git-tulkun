@@ -17,8 +17,14 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             archive_ext: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive_ext: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
+            archive_ext: tar.gz
+          - os: macos-latest
+            target: x86_64-apple-darwin
             archive_ext: tar.gz
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -72,7 +78,7 @@ jobs:
             git-tulkun-*.*
 
       - name: Update floating major tag (v1)
-        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref_name, 'v1.')
+        if: matrix.target == 'x86_64-unknown-linux-gnu' && startsWith(github.ref_name, 'v1.')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

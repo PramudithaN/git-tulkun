@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GitTulkun | Interactive GitHub README Whale Generator</title>
+  <title>git-tulkun | Interactive GitHub README Whale Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -30,8 +30,8 @@
     <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[#30363d] pb-5">
       <div>
         <div class="flex items-center gap-2.5">
-          <h1 class="text-2xl font-bold tracking-tight text-white">GitTulkun</h1>
-          <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40">v1.0</span>
+          <h1 class="text-2xl font-bold tracking-tight text-white">git-tulkun</h1>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40">v1.1</span>
         </div>
         <p class="text-sm text-[#8b949e] mt-1">
           Enter your GitHub username to preview your procedural pixel-art Tulkun, compare with a friend, or copy the setup snippets.
@@ -72,7 +72,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
             <span class="inline-block w-2 h-2 rounded-full bg-[#3fb950]"></span>
-            <span id="primaryCaption" class="font-semibold text-white text-sm">@PramudithaN (Stage 5: Adult Male Bull)</span>
+            <span id="primaryCaption" class="font-semibold text-white text-sm">@PramudithaN (Stage 3: Adolescent Tulkun)</span>
           </div>
           <span class="text-[#8b949e] font-mono">1280x560 High-Resolution 4x Pixel Art • Resets Jan 1st</span>
         </div>
@@ -251,26 +251,34 @@
     }
 
     function getBio(commits) {
-      const g = Math.min(1.0, Math.pow(commits / 1200.0, 0.55));
-      const maturity = smoothStep((g - 0.08) / 0.88);
-      const femalePhase = smoothStep((g - 0.35) / 0.38);
-      const bullPhase = smoothStep((g - 0.72) / 0.26);
+      const g = Math.min(1.0, Math.max(0.0, Math.pow(commits / 2800.0, 0.45)));
+      const maturity = smoothStep((g - 0.14) / 0.82);
+      const femalePhase = smoothStep((g - 0.42) / 0.34);
+      const bullPhase = smoothStep((g - 0.72) / 0.25);
       const bodyLen = lerp(64.0, 186.0, g);
       const maxRadius = bodyLen * lerp(0.165, 0.115, maturity);
       return {
         commits, g, maturity, femalePhase, bullPhase, bodyLen, maxRadius,
         finStubbiness: lerp(0.52, 1.16, maturity),
-        kuruScale: smoothStep((g - 0.06) / 0.50),
+        kuruScale: smoothStep((g - 0.12) / 0.48),
         jawToothCount: Math.round(lerp(2.5, 6.0, maturity))
       };
     }
 
     function getStageTitle(c) {
-      if (c >= 1000) return "Stage 5: Adult Male Bull";
-      if (c >= 500) return "Stage 4: Adult Female";
-      if (c >= 250) return "Stage 3: Adolescent Tulkun";
-      if (c >= 100) return "Stage 2: Yearling Calf";
+      if (c >= 2500) return "Stage 5: Adult Male Bull";
+      if (c >= 1200) return "Stage 4: Adult Female";
+      if (c >= 500) return "Stage 3: Adolescent Tulkun";
+      if (c >= 150) return "Stage 2: Yearling Calf";
       return "Stage 1: Baby Tulkun Calf";
+    }
+
+    function getHudStageLabel(c) {
+      if (c >= 2500) return "STAGE 5: ADULT BULL";
+      if (c >= 1200) return "STAGE 4: ADULT FEMALE";
+      if (c >= 500) return "STAGE 3: ADOLESCENT";
+      if (c >= 150) return "STAGE 2: YEARLING CALF";
+      return "STAGE 1: BABY CALF";
     }
 
     function sampleChain(pts, sx, sy) {
@@ -557,7 +565,7 @@
           setOutlinedNativePixel(nativeBuf, W, H, 8 + dx, line1Y + dy, coat.calfBlue[3]);
         }
       }
-      drawNativePixelString(nativeBuf, W, H, 14, line1Y, "AVATAR: TULKUN", coat.cream[3]);
+      drawNativePixelString(nativeBuf, W, H, 14, line1Y, getHudStageLabel(commits), coat.cream[3]);
       drawNativePixelString(nativeBuf, W, H, 8, line2Y, `CONTRIBUTIONS: ${commits}`, coat.calfBlue[3]);
 
       // Integer 4x Nearest-Neighbor Upscale into 1280x560 Canvas ImageData
@@ -609,18 +617,11 @@ jobs:
   tulkun:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: PramudithaN/git-tulkun@v1
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tulkun/
-          git diff --cached --quiet || git commit -m "chore: update Tulkun"
-          git push`;
+      - uses: PramudithaN/git-tulkun@v1`;
 
       const md = `<p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
-    <img src="tulkun/tulkun.gif" width="640" alt="${primaryUser}'s GitHub Tulkun" />
+    <img src="https://raw.githubusercontent.com/${primaryUser}/${primaryUser}/output/tulkun/tulkun.gif" width="640" alt="${primaryUser}'s git-tulkun" />
   </a>
 </p>`;
 
@@ -688,7 +689,7 @@ jobs:
         if (contribRes && contribRes.ok) {
           const contribJson = await contribRes.json();
           if (contribJson && contribJson.total && typeof contribJson.total[currentYear] === "number") {
-            actualCommits = Math.max(1, contribJson.total[currentYear]);
+            actualCommits = Math.max(0, contribJson.total[currentYear]);
           }
         }
 
@@ -774,7 +775,7 @@ jobs:
       // Crisp high-resolution header text
       sctx.fillStyle = "#f0f6fc";
       sctx.font = "bold 24px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
-      sctx.fillText(`GitTulkun  |  @${primaryUser}`, 40, 60);
+      sctx.fillText(`git-tulkun  |  @${primaryUser}`, 40, 60);
 
       sctx.fillStyle = "#58a6ff";
       sctx.font = "600 22px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
@@ -788,7 +789,7 @@ jobs:
 
       // Bottom-right stage progression indicator
       const stages = ["1. Calf", "2. Yearling", "3. Adolescent", "4. Female", "5. Bull"];
-      const activeIdx = primaryCommits >= 1000 ? 4 : primaryCommits >= 500 ? 3 : primaryCommits >= 250 ? 2 : primaryCommits >= 100 ? 1 : 0;
+      const activeIdx = primaryCommits >= 2500 ? 4 : primaryCommits >= 1200 ? 3 : primaryCommits >= 500 ? 2 : primaryCommits >= 150 ? 1 : 0;
       let sx = 640;
       sctx.font = "bold 17px monospace";
       for (let i = 0; i < stages.length; i++) {

@@ -1,4 +1,4 @@
-name: git-profile-tulkun
+name: git-tulkun
 description: Generate a procedural pixel-art Tulkun whale GIF from your GitHub contributions and language colors.
 branding:
   icon: anchor
@@ -11,14 +11,23 @@ inputs:
   view:
     description: Camera angle, one of side, dive, or top.
     default: side
+  window:
+    description: Contribution window, one of annual (Jan 1 reset) or rolling (trailing 365 days).
+    default: annual
   canon:
     description: Set to 'true' to use canon Pandoran colors instead of GitHub language colors.
     default: "false"
   output-dir:
-    description: Folder, relative to the workspace, that receives tulkun.gif, tulkun.png, and preview.html.
+    description: Folder, relative to the workspace, that receives tulkun.gif, tulkun.png, and share-card.png.
     default: tulkun
+  commit:
+    description: Set to 'true' to automatically commit and push the generated images.
+    default: "true"
+  branch:
+    description: Target branch when commit is 'true' (defaults to orphan 'output' branch to prevent main history bloat).
+    default: output
   token:
-    description: Token for reading the account's public data; the built-in token is enough.
+    description: Token for reading public data and pushing to the output branch.
     default: ${{ github.token }}
 
 runs:
@@ -32,18 +41,25 @@ runs:
         version=$(grep -m1 '^version' "$GITHUB_ACTION_PATH/Cargo.toml" | cut -d'"' -f2)
         repo="${GITHUB_ACTION_REPOSITORY:-PramudithaN/git-tulkun}"
         case "$RUNNER_OS-$RUNNER_ARCH" in
-          Linux-X64)   target="x86_64-unknown-linux-gnu" ;;
-          macOS-ARM64) target="aarch64-apple-darwin" ;;
-          *)           target="" ;;
+          Linux-X64)     target="x86_64-unknown-linux-gnu"; ext="tar.gz" ;;
+          Linux-ARM64)   target="aarch64-unknown-linux-gnu"; ext="tar.gz" ;;
+          macOS-ARM64)   target="aarch64-apple-darwin"; ext="tar.gz" ;;
+          macOS-X64)     target="x86_64-apple-darwin"; ext="tar.gz" ;;
+          Windows-X64)   target="x86_64-pc-windows-msvc"; ext="zip" ;;
+          *)             target=""; ext="" ;;
         esac
 
         install_dir="$RUNNER_TEMP/git-tulkun-bin"
         mkdir -p "$install_dir"
 
         if [ -n "$target" ] && gh release download "v$version" --repo "$repo" --dir "$install_dir" \
-            --pattern "git-tulkun-$version-$target.tar.gz" 2>/dev/null; then
+            --pattern "git-tulkun-$version-$target.$ext" 2>/dev/null; then
           echo "Downloaded pre-built git-tulkun v$version for $target"
-          tar -xzf "$install_dir/git-tulkun-$version-$target.tar.gz" -C "$install_dir"
+          if [ "$ext" = "zip" ]; then
+            unzip -q "$install_dir/git-tulkun-$version-$target.zip" -d "$install_dir"
+          else
+            tar -xzf "$install_dir/git-tulkun-$version-$target.tar.gz" -C "$install_dir"
+          fi
           echo "$install_dir/git-tulkun-$version-$target" >> "$GITHUB_PATH"
         else
           echo "No pre-built release asset found; compiling git-tulkun from source..."
@@ -54,10 +70,12 @@ runs:
     - name: Collect the account snapshot
       shell: bash
       env:
+        GITHUB_TOKEN: ${{ inputs.token }}
         GH_TOKEN: ${{ inputs.token }}
         TULKUN_LOGIN: ${{ inputs.login }}
+        TULKUN_WINDOW: ${{ inputs.window }}
       run: |
-        git-tulkun collect "$TULKUN_LOGIN" --output "$RUNNER_TEMP/tulkun-snapshot.json"
+        git-tulkun collect "$TULKUN_LOGIN" --window "$TULKUN_WINDOW" --output "$RUNNER_TEMP/tulkun-snapshot.json"
 
     - name: Render the Tulkun
       shell: bash
@@ -73,3 +91,34 @@ runs:
         git-tulkun render "$RUNNER_TEMP/tulkun-snapshot.json" \
           --output-dir "$TULKUN_OUTPUT_DIR" \
           --view "$TULKUN_VIEW" $extra_flags
+
+    - name: Commit and push generated Tulkun assets
+      if: inputs.commit == 'true'
+      shell: bash
+      env:
+        TULKUN_BRANCH: ${{ inputs.branch }}
+        TULKUN_OUTPUT_DIR: ${{ inputs.output-dir }}
+        TULKUN_TOKEN: ${{ inputs.token }}
+      run: |
+        rm -f "$TULKUN_OUTPUT_DIR/preview.html"
+        remote_url="https://x-access-token:${TULKUN_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+        if [ -d .git ] && [ "${GITHUB_REF_NAME:-}" = "$TULKUN_BRANCH" ]; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$TULKUN_OUTPUT_DIR/tulkun.gif" "$TULKUN_OUTPUT_DIR/tulkun.png" "$TULKUN_OUTPUT_DIR/share-card.png"
+          git diff --cached --quiet || (git commit -m "chore: update Tulkun" && git push "$remote_url" "HEAD:$TULKUN_BRANCH")
+        else
+          work_dir="$RUNNER_TEMP/tulkun-publish"
+          rm -rf "$work_dir"
+          mkdir -p "$work_dir/$TULKUN_OUTPUT_DIR"
+          cp "$TULKUN_OUTPUT_DIR/tulkun.gif" "$TULKUN_OUTPUT_DIR/tulkun.png" "$TULKUN_OUTPUT_DIR/share-card.png" "$work_dir/$TULKUN_OUTPUT_DIR/"
+          cd "$work_dir"
+          git init -q
+          git checkout -q --orphan "$TULKUN_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$TULKUN_OUTPUT_DIR/tulkun.gif" "$TULKUN_OUTPUT_DIR/tulkun.png" "$TULKUN_OUTPUT_DIR/share-card.png"
+          git commit -q -m "chore: update Tulkun"
+          git push -f "$remote_url" "$TULKUN_BRANCH:$TULKUN_BRANCH"
+        fi

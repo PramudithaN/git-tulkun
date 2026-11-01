@@ -1,9 +1,12 @@
 [package]
 name = "git-tulkun"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
-description = "Draw a procedural pixel-art Pandoran Tulkun whale from a GitHub account's commits and language colors, as a looping GIF for a profile README."
+description = "Draw a procedural pixel-art Tulkun whale from a GitHub account's commits and language colors, as a looping GIF for a profile README."
 license = "MIT"
+repository = "https://github.com/PramudithaN/git-tulkun"
+homepage = "https://pramudithan.github.io/git-tulkun/"
+readme = "README.md"
 keywords = ["github", "profile", "tulkun", "pixel-art", "gif"]
 categories = ["command-line-utilities", "visualization"]
 
@@ -13,3 +16,4 @@ gif = "0.13"
 png = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+ureq = { version = "2.10", features = ["json"] }

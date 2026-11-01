@@ -64,13 +64,17 @@ pub struct TulkunBiology {
 }
 
 impl TulkunBiology {
-    /// Compute Tulkun annual life-stage proportions from current-year contribution count.
-    /// `1..100` = Baby Calf, `100..250` = Yearling, `250..500` = Adolescent, `500..1000` = Adult Female, `1000+` = Adult Male Bull.
+    /// Compute Tulkun life-stage proportions on a log-like curve (`0` through `2,500+` contributions):
+    /// - `0..150`: Stage 1: Baby Tulkun Calf
+    /// - `150..500`: Stage 2: Yearling Calf
+    /// - `500..1,200`: Stage 3: Adolescent Tulkun
+    /// - `1,200..2,500`: Stage 4: Adult Female
+    /// - `2,500+`: Stage 5: Adult Male Bull
     pub fn from_commits(commits: u64) -> Self {
-        let g = (commits as f64 / 1200.0).powf(0.55).min(1.0);
-        let maturity = smooth_step((g - 0.08) / 0.88);
-        let female_phase = smooth_step((g - 0.35) / 0.38);
-        let bull_phase = smooth_step((g - 0.72) / 0.26);
+        let g = ((commits as f64) / 2800.0).powf(0.45).clamp(0.0, 1.0);
+        let maturity = smooth_step((g - 0.14) / 0.82);
+        let female_phase = smooth_step((g - 0.42) / 0.34);
+        let bull_phase = smooth_step((g - 0.72) / 0.25);
 
         let body_len = lerp(64.0, 186.0, g);
         let fatness_ratio = lerp(0.165, 0.115, maturity);
@@ -85,22 +89,36 @@ impl TulkunBiology {
             body_len,
             max_radius,
             fin_stubbiness: lerp(0.52, 1.16, maturity),
-            kuru_scale: smooth_step((g - 0.06) / 0.50),
+            kuru_scale: smooth_step((g - 0.12) / 0.48),
             jaw_tooth_count: lerp(2.5, 6.0, maturity).round(),
         }
     }
 
     pub fn stage_name(&self) -> &'static str {
-        if self.commits >= 1000 {
+        if self.commits >= 2500 {
             "Adult Male Bull (Hooked Hammer-Crest)"
-        } else if self.commits >= 500 {
+        } else if self.commits >= 1200 {
             "Adult Female (Sloped Sensor Crest)"
-        } else if self.commits >= 250 {
+        } else if self.commits >= 500 {
             "Adolescent Tulkun"
-        } else if self.commits >= 100 {
+        } else if self.commits >= 150 {
             "Yearling Calf (Kuru Active)"
         } else {
             "Baby Tulkun Calf"
+        }
+    }
+
+    pub fn hud_stage_label(&self) -> &'static str {
+        if self.commits >= 2500 {
+            "STAGE 5: ADULT BULL"
+        } else if self.commits >= 1200 {
+            "STAGE 4: ADULT FEMALE"
+        } else if self.commits >= 500 {
+            "STAGE 3: ADOLESCENT"
+        } else if self.commits >= 150 {
+            "STAGE 2: YEARLING CALF"
+        } else {
+            "STAGE 1: BABY CALF"
         }
     }
 }
@@ -254,7 +272,7 @@ pub fn render_swim_frame(
     let h = FRAME_HEIGHT_PIXELS;
     let mut rgba_pixels = vec![[0_u8; 4]; (w * h) as usize];
 
-    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions).max(1);
+    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions);
     let bio = TulkunBiology::from_commits(effective_commits);
 
     // Seamless slow 5-second period phase in [0, TAU)
@@ -523,8 +541,8 @@ pub fn render_swim_frame(
     // Paint subtle drifting deep-ocean bioluminescent plankton motes
     // Removed background dots around creature as requested
 
-    // Paint Bottom-Left Pixel-Art Metrics HUD: "NAME: TULKEN" & "CONTRIBUTIONS: <count>"
-    paint_metrics_hud(&mut rgba_pixels, w, h, effective_commits, coat);
+    // Paint Bottom-Left Pixel-Art Metrics HUD: Stage Label & Contributions
+    paint_metrics_hud(&mut rgba_pixels, w, h, &bio, coat);
 
     let _ = n_pts;
     TulkunFrame { rgba_pixels }
@@ -960,20 +978,19 @@ fn paint_deep_ocean_motes(
 }
 
 /// Paint the bottom-left pixel-art HUD metrics:
-/// Line 1: `AVATAR: TULKUN` (with a glowing status dot)
+/// Line 1: `<STAGE>` (e.g., `STAGE 4: ADULT FEMALE`, with a glowing language pip)
 /// Line 2: `CONTRIBUTIONS: <count>`
 fn paint_metrics_hud(
     rgba_pixels: &mut [[u8; 4]],
     w: u32,
     h: u32,
-    contributions: u64,
+    bio: &TulkunBiology,
     coat: &TulkunCoat,
 ) {
     let base_x = 8_u32;
     let line1_y = h - 17;
     let line2_y = h - 9;
 
-    // Glowing Language Indicator Pip beside "AVATAR: TULKUN"
     let pip_color = coat.belly[3];
     for dy in 0..5_u32 {
         for dx in 0..3_u32 {
@@ -981,10 +998,10 @@ fn paint_metrics_hud(
         }
     }
 
-    let line1 = "AVATAR: TULKUN";
+    let line1 = bio.hud_stage_label();
     draw_pixel_string(rgba_pixels, w, h, base_x + 6, line1_y, line1, coat.cream[3]);
 
-    let line2 = format!("CONTRIBUTIONS: {contributions}");
+    let line2 = format!("CONTRIBUTIONS: {}", bio.commits);
     draw_pixel_string(rgba_pixels, w, h, base_x, line2_y, &line2, coat.belly[3]);
 }
 
@@ -1025,21 +1042,11 @@ pub fn render_share_card_frame(
         pixels[(18 * w + x) as usize] = border_col;
     }
 
-    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions).max(1);
+    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions);
     let bio = TulkunBiology::from_commits(effective_commits);
 
     draw_pixel_string(&mut pixels, w, h, 9, 9, "GIT-TULKUN", coat.cream[3]);
-    let stage_short = if bio.commits >= 1000 {
-        "STAGE 5: ADULT BULL"
-    } else if bio.commits >= 500 {
-        "STAGE 4: ADULT FEMALE"
-    } else if bio.commits >= 250 {
-        "STAGE 3: ADOLESCENT"
-    } else if bio.commits >= 100 {
-        "STAGE 2: YEARLING CALF"
-    } else {
-        "STAGE 1: BABY CALF"
-    };
+    let stage_short = bio.hud_stage_label();
     let right_x = w.saturating_sub((stage_short.len() as u32) * 4 + 8);
     draw_pixel_string(&mut pixels, w, h, right_x, 9, stage_short, coat.belly[3]);
 
@@ -1060,13 +1067,13 @@ pub fn render_share_card_frame(
 
     // Bottom-right 5-stage evolution progress pills
     let stages = ["1.CALF", "2.YRLG", "3.ADOL", "4.FEM", "5.BULL"];
-    let active_idx = if bio.commits >= 1000 {
+    let active_idx = if bio.commits >= 2500 {
         4
-    } else if bio.commits >= 500 {
+    } else if bio.commits >= 1200 {
         3
-    } else if bio.commits >= 250 {
+    } else if bio.commits >= 500 {
         2
-    } else if bio.commits >= 100 {
+    } else if bio.commits >= 150 {
         1
     } else {
         0

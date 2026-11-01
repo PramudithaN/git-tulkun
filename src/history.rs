@@ -1,8 +1,18 @@
 //! Account snapshot and language share models.
 
 use std::collections::BTreeMap;
-use chrono::NaiveDate;
+use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
+
+/// Window mode used to sum contributions for Tulkun stage progression.
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum ContributionWindow {
+    /// Current calendar year (January 1 through `observed_on`), resetting every January 1st.
+    #[default]
+    Annual,
+    /// Trailing 365-day rolling window ending on `observed_on`.
+    Rolling365,
+}
 
 /// One language observed in a user's public repositories along with its GitHub hex color.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -28,7 +38,7 @@ pub struct AccountSnapshot {
     pub login: String,
     pub account_id: u64,
     pub observed_on: NaiveDate,
-    /// Total contributions across the observed window (drives Tulkun growth from Calf to Bull).
+    /// Total contributions across the observed window (drives Tulkun growth from Calf to Patriarch).
     pub total_contributions: u64,
     /// Contributions made in the current calendar month.
     pub monthly_contributions: u64,
@@ -51,8 +61,17 @@ impl AccountSnapshot {
     }
 }
 
-/// Summarize daily contributions into total, current month, current streak, and longest streak.
+/// Summarize daily contributions in the current calendar year into total, current month, current streak, and longest streak.
 pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (u64, u64, u32, u32) {
+    summarize_calendar_window(days, observed_on, ContributionWindow::Annual)
+}
+
+/// Summarize daily contributions across `window` (`Annual` or `Rolling365`).
+pub fn summarize_calendar_window(
+    days: &[ContributionDay],
+    observed_on: NaiveDate,
+    window: ContributionWindow,
+) -> (u64, u64, u32, u32) {
     let mut sorted = days.to_vec();
     sorted.sort_by_key(|d| d.date);
 
@@ -60,12 +79,17 @@ pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (
     let mut monthly = 0_u64;
     let mut current_streak = 0_u32;
     let mut longest_streak = 0_u32;
+    let rolling_cutoff = observed_on - Duration::days(364);
 
     for day in &sorted {
         if day.date > observed_on {
             continue;
         }
-        if day.date.year_ce() == observed_on.year_ce() {
+        let in_window = match window {
+            ContributionWindow::Annual => day.date.year_ce() == observed_on.year_ce(),
+            ContributionWindow::Rolling365 => day.date >= rolling_cutoff,
+        };
+        if in_window {
             total += u64::from(day.count);
         }
         if day.date.year_ce() == observed_on.year_ce() && day.date.month0() == observed_on.month0() {
@@ -81,8 +105,6 @@ pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (
 
     (total, monthly, current_streak, longest_streak)
 }
-
-use chrono::Datelike;
 
 /// Aggregate repository languages and rank from highest share to lowest.
 pub fn rank_languages(raw_counts: BTreeMap<String, (String, u32)>) -> Vec<LanguageShare> {
