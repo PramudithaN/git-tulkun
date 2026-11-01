@@ -14,10 +14,10 @@ use chrono::NaiveDate;
 use git_tulkun::coat::TulkunCoat;
 use git_tulkun::collect::collect_account_snapshot;
 use git_tulkun::history::{AccountSnapshot, LanguageShare};
-use git_tulkun::output::{encode_gif, encode_png, encode_preview_html};
+use git_tulkun::output::{encode_gif, encode_png, encode_preview_html, encode_share_card_png};
 use git_tulkun::render::{
-    CameraView, LOOP_FRAME_COUNT, TulkunBiology, TulkunFrame, render_still_frame,
-    render_swim_frame,
+    CameraView, LOOP_FRAME_COUNT, TulkunBiology, TulkunFrame, render_share_card_frame,
+    render_still_frame, render_swim_frame,
 };
 
 fn main() -> ExitCode {
@@ -185,6 +185,7 @@ fn render_to_directory(
 
     let gif_bytes = encode_gif(&swim_frames)?;
     let png_bytes = encode_png(&render_still_frame(snapshot, &coat, view))?;
+    let share_card_bytes = encode_share_card_png(&render_share_card_frame(snapshot, &coat, view))?;
 
     let bio = TulkunBiology::from_commits(
         snapshot
@@ -203,17 +204,21 @@ fn render_to_directory(
     fs::create_dir_all(output_dir).map_err(|e| format!("{}: {e}", output_dir.display()))?;
     let gif_path = output_dir.join("tulkun.gif");
     let png_path = output_dir.join("tulkun.png");
+    let share_path = output_dir.join("share-card.png");
     let html_path = output_dir.join("preview.html");
 
     fs::write(&gif_path, gif_bytes).map_err(|e| format!("{}: {e}", gif_path.display()))?;
     fs::write(&png_path, png_bytes).map_err(|e| format!("{}: {e}", png_path.display()))?;
+    fs::write(&share_path, share_card_bytes)
+        .map_err(|e| format!("{}: {e}", share_path.display()))?;
     fs::write(&html_path, preview_html.as_bytes())
         .map_err(|e| format!("{}: {e}", html_path.display()))?;
 
     println!(
-        "{caption}: wrote {}, {}, {}",
+        "{caption}: wrote {}, {}, {}, {}",
         gif_path.display(),
         png_path.display(),
+        share_path.display(),
         html_path.display()
     );
     Ok(())

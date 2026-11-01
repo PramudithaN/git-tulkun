@@ -960,7 +960,7 @@ fn paint_deep_ocean_motes(
 }
 
 /// Paint the bottom-left pixel-art HUD metrics:
-/// Line 1: `TULKEN` (with a glowing status dot)
+/// Line 1: `AVATAR: TULKUN` (with a glowing status dot)
 /// Line 2: `CONTRIBUTIONS: <count>`
 fn paint_metrics_hud(
     rgba_pixels: &mut [[u8; 4]],
@@ -973,7 +973,7 @@ fn paint_metrics_hud(
     let line1_y = h - 17;
     let line2_y = h - 9;
 
-    // Glowing Language Indicator Pip beside "TULKEN"
+    // Glowing Language Indicator Pip beside "AVATAR: TULKUN"
     let pip_color = coat.belly[3];
     for dy in 0..5_u32 {
         for dx in 0..3_u32 {
@@ -981,11 +981,111 @@ fn paint_metrics_hud(
         }
     }
 
-    let line1 = "AVATAR: TULKEN";
+    let line1 = "AVATAR: TULKUN";
     draw_pixel_string(rgba_pixels, w, h, base_x + 6, line1_y, line1, coat.cream[3]);
 
     let line2 = format!("CONTRIBUTIONS: {contributions}");
     draw_pixel_string(rgba_pixels, w, h, base_x, line2_y, &line2, coat.belly[3]);
+}
+
+/// Native dimensions for the 1280x640 (4x scaled) shareable evolution & social preview card.
+pub const SHARE_CARD_WIDTH_PIXELS: u32 = 320;
+pub const SHARE_CARD_HEIGHT_PIXELS: u32 = 160;
+
+/// Render a 320x160 native frame (exported at 4x = 1280x640) for social sharing ("Your Tulkun This Year" card & repo social preview).
+pub fn render_share_card_frame(
+    snapshot: &AccountSnapshot,
+    coat: &TulkunCoat,
+    view: CameraView,
+) -> Vec<[u8; 4]> {
+    let w = SHARE_CARD_WIDTH_PIXELS;
+    let h = SHARE_CARD_HEIGHT_PIXELS;
+    let bg = [13_u8, 17, 23, 255];
+    let panel_bg = [19_u8, 25, 34, 255];
+    let border_col = coat.belly[1];
+    let mut pixels = vec![bg; (w * h) as usize];
+
+    // Outer 1px border frame at 3px inset
+    for x in 3..(w - 3) {
+        pixels[(3 * w + x) as usize] = border_col;
+        pixels[((h - 4) * w + x) as usize] = border_col;
+    }
+    for y in 3..(h - 3) {
+        pixels[(y * w + 3) as usize] = border_col;
+        pixels[(y * w + (w - 4)) as usize] = border_col;
+    }
+
+    // Top header banner bar (y = 4..18)
+    for y in 4..18 {
+        for x in 4..(w - 4) {
+            pixels[(y * w + x) as usize] = panel_bg;
+        }
+    }
+    for x in 4..(w - 4) {
+        pixels[(18 * w + x) as usize] = border_col;
+    }
+
+    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions).max(1);
+    let bio = TulkunBiology::from_commits(effective_commits);
+
+    draw_pixel_string(&mut pixels, w, h, 9, 9, "GIT-TULKUN", coat.cream[3]);
+    let stage_short = if bio.commits >= 115 {
+        "STAGE 5: ADULT BULL"
+    } else if bio.commits >= 75 {
+        "STAGE 4: ADULT FEMALE"
+    } else if bio.commits >= 40 {
+        "STAGE 3: ADOLESCENT"
+    } else if bio.commits >= 15 {
+        "STAGE 2: YEARLING CALF"
+    } else {
+        "STAGE 1: BABY CALF"
+    };
+    let right_x = w.saturating_sub((stage_short.len() as u32) * 4 + 8);
+    draw_pixel_string(&mut pixels, w, h, right_x, 9, stage_short, coat.belly[3]);
+
+    // Composite still Tulkun frame into center (y_offset = 14)
+    let still = render_still_frame(snapshot, coat, view);
+    for sy in 0..FRAME_HEIGHT_PIXELS {
+        let dy = sy + 14;
+        if dy >= h - 4 {
+            continue;
+        }
+        for sx in 4..(FRAME_WIDTH_PIXELS - 4) {
+            let src_px = still.rgba_pixels[(sy * FRAME_WIDTH_PIXELS + sx) as usize];
+            if src_px[3] != 0 {
+                pixels[(dy * w + sx) as usize] = src_px;
+            }
+        }
+    }
+
+    // Bottom-right 5-stage evolution progress pills
+    let stages = ["1.CALF", "2.YRLG", "3.ADOL", "4.FEM", "5.BULL"];
+    let active_idx = if bio.commits >= 115 {
+        4
+    } else if bio.commits >= 75 {
+        3
+    } else if bio.commits >= 40 {
+        2
+    } else if bio.commits >= 15 {
+        1
+    } else {
+        0
+    };
+    let mut sx = 148_u32;
+    let sy = h - 13;
+    for (idx, label) in stages.iter().enumerate() {
+        let col = if idx == active_idx {
+            coat.cream[3]
+        } else if idx < active_idx {
+            coat.belly[2]
+        } else {
+            coat.armor[2]
+        };
+        draw_pixel_string(&mut pixels, w, h, sx, sy, label, col);
+        sx += (label.len() as u32) * 4 + 6;
+    }
+
+    pixels
 }
 
 fn draw_pixel_string(
@@ -1087,6 +1187,7 @@ fn glyph_3x5(ch: char) -> [u8; 5] {
         '9' => [0b111, 0b101, 0b111, 0b001, 0b111],
         ':' => [0b000, 0b010, 0b000, 0b010, 0b000],
         '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
+        '.' => [0b000, 0b000, 0b000, 0b000, 0b010],
         _ => [0b000, 0b000, 0b000, 0b000, 0b000],
     }
 }

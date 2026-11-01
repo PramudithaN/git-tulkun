@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitTulkun — Interactive GitHub README Whale Generator & Comparator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#30363d] pb-4">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white">GitTulkun — Instant GitHub README Generator</h1>
+        <p class="text-sm text-[#8b949e]">Type your GitHub username to preview your procedural pixel-art Tulkun, compare with a friend, or copy the 1-step setup.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/PramudithaN/git-tulkun" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] transition">
+          Star on GitHub
+        </a>
+        <button id="downloadShareBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#238636] text-white hover:bg-[#2ea043] transition">
+          Download 1280×640 Share Card
+        </button>
+      </div>
+    </div>
+
+    <!-- Generator Controls -->
+    <div class="card p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1">GitHub Username</label>
+        <div class="flex gap-1.5">
+          <input id="userInput" type="text" value="PramudithaN" placeholder="e.g. PramudithaN" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white" />
+          <button id="fetchUserBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:opacity-90">Load</button>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Current-Year Contributions: <span id="commitReadout" class="text-white">140</span></label>
+        <input id="commitSlider" type="range" min="1" max="150" value="140" class="w-full accent-[#1f6feb] mt-1.5" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Camera Perspective</label>
+        <select id="viewSelect" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white">
+          <option value="side">side — Lateral Side Swim</option>
+          <option value="dive">dive — 3/4 Dynamic Dive</option>
+          <option value="top">top — Dorsal Top-Down</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Compare With a Friend (Optional)</label>
+        <div class="flex gap-1.5">
+          <input id="friendInput" type="text" placeholder="Friend's GitHub login" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white" />
+          <button id="compareBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Compare</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Canvas Preview (Single or Side-by-Side Comparison) -->
+    <div id="canvasGrid" class="grid grid-cols-1 gap-4">
+      <div class="card p-4 space-y-2">
+        <div class="flex items-center justify-between text-xs text-[#8b949e]">
+          <span id="primaryCaption" class="font-mono text-white">@PramudithaN — Stage 5: Adult Male Bull</span>
+          <span>Resets every Jan 1st • 15 FPS Pixel-Art Buffer</span>
+        </div>
+        <div class="rounded-lg bg-[#0d1117] border border-[#30363d] p-3 flex justify-center">
+          <canvas id="mainCanvas" width="320" height="140" class="w-full max-w-[680px] h-auto"></canvas>
+        </div>
+      </div>
+      <div id="friendCard" class="card p-4 space-y-2 hidden">
+        <div class="flex items-center justify-between text-xs text-[#8b949e]">
+          <span id="friendCaption" class="font-mono text-white">@friend — Stage 3: Adolescent Tulkun</span>
+          <span>Side-by-Side Comparison</span>
+        </div>
+        <div class="rounded-lg bg-[#0d1117] border border-[#30363d] p-3 flex justify-center">
+          <canvas id="friendCanvas" width="320" height="140" class="w-full max-w-[680px] h-auto"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- One-Click Copy Setup Snippets -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">1. Paste into <code class="text-white">.github/workflows/tulkun.yml</code></h2>
+          <button id="copyYamlBtn" class="px-2.5 py-1 rounded text-xs bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Copy YAML</button>
+        </div>
+        <pre id="yamlCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3 overflow-x-auto text-[#c9d1d9]"></pre>
+      </div>
+      <div class="card p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">2. Paste into your <code class="text-white">README.md</code></h2>
+          <button id="copyMdBtn" class="px-2.5 py-1 rounded text-xs bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Copy Markdown</button>
+        </div>
+        <pre id="mdCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3 overflow-x-auto text-[#c9d1d9]"></pre>
+        <p class="text-xs text-[#8b949e]">After committing both files, go to <strong>Actions → Update Tulkun → Run workflow</strong> to render your first GIF.</p>
+      </div>
+    </div>
+
+    <footer class="text-center text-xs text-[#8b949e] pt-4 border-t border-[#30363d]">
+      Unofficial fan-made open-source project. <em>Tulkun</em> and <em>Avatar: The Way of Water</em> are trademarks of 20th Century Studios / Lightstorm Entertainment.
+    </footer>
+  </div>
+
+  <script>
+    const BAYER_4X4 = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+    const OUTLINE_COLOR = [15, 18, 26, 255];
+    const LANG_COLORS = {
+      TypeScript: [49, 120, 198], JavaScript: [241, 224, 90], Rust: [222, 165, 132],
+      Python: [53, 114, 165], Go: [0, 173, 216], Java: [176, 114, 25],
+      "C++": [243, 75, 125], C: [85, 85, 85], Ruby: [112, 21, 22], Vue: [65, 184, 131]
+    };
+
+    function makeRamp(rgb, darkScale = 0.25, lightScale = 1.35) {
+      return [0, 0.35, 0.7, 1.0].map(t => {
+        const s = darkScale + (lightScale - darkScale) * t;
+        return [
+          Math.min(255, Math.max(12, Math.round(rgb[0] * s))),
+          Math.min(255, Math.max(14, Math.round(rgb[1] * s))),
+          Math.min(255, Math.max(18, Math.round(rgb[2] * s)))
+        ];
+      });
+    }
+
+    function buildCoatFromColors(c1 = [49,120,198], c2 = [222,165,132], c3 = [53,114,165]) {
+      return {
+        armor: makeRamp(c1, 0.16, 0.58),
+        calfBlue: makeRamp(c1, 0.32, 1.25),
+        cream: [[124,132,138],[172,180,186],[216,222,226],[248,250,252]],
+        crestRed: makeRamp(c2, 0.35, 1.22),
+        tipGreen: makeRamp(c3, 0.45, 1.30)
+      };
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+    function smoothStep(t) { const c = Math.max(0, Math.min(1, t)); return c * c * (3 - 2 * c); }
+    function ditherThreshold(x, y) { return (BAYER_4X4[y & 3][x & 3] + 0.5) / 16.0; }
+    function chooseShade(ramp, b, x, y) {
+      const pos = Math.max(0, Math.min(1, b)) * (ramp.length - 1);
+      const idx = Math.floor(pos) + ((pos - Math.floor(pos)) > ditherThreshold(x, y) ? 1 : 0);
+      return ramp[Math.min(ramp.length - 1, idx)];
+    }
+
+    function getBio(commits) {
+      const g = Math.min(1.0, Math.pow(commits / 145.0, 0.60));
+      const maturity = smoothStep((g - 0.08) / 0.92);
+      const femalePhase = smoothStep((g - 0.30) / 0.40);
+      const bullPhase = smoothStep((g - 0.68) / 0.32);
+      const bodyLen = lerp(64.0, 186.0, g);
+      const maxRadius = bodyLen * lerp(0.165, 0.115, maturity);
+      return {
+        commits, g, maturity, femalePhase, bullPhase, bodyLen, maxRadius,
+        finStubbiness: lerp(0.52, 1.16, maturity),
+        kuruScale: smoothStep((g - 0.06) / 0.50),
+        jawToothCount: Math.round(lerp(2.5, 6.0, maturity))
+      };
+    }
+
+    function getStageTitle(c) {
+      if (c >= 115) return "Stage 5: Adult Male Bull";
+      if (c >= 75) return "Stage 4: Adult Female";
+      if (c >= 40) return "Stage 3: Adolescent Tulkun";
+      if (c >= 15) return "Stage 2: Yearling Calf";
+      return "Stage 1: Baby Tulkun Calf";
+    }
+
+    function sampleChain(pts, sx, sy) {
+      let bestNorm = Infinity, best = null;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const vx = b.x - a.x, vy = b.y - a.y, lSq = vx * vx + vy * vy;
+        if (lSq < 1e-6) continue;
+        const ox = sx - a.x, oy = sy - a.y;
+        const t = Math.max(0, Math.min(1, (ox * vx + oy * vy) / lSq));
+        const cx = a.x + t * vx, cy = a.y + t * vy, dist = Math.hypot(sx - cx, sy - cy);
+        const rTop = (a.rTop ?? a.r) + t * ((b.rTop ?? b.r) - (a.rTop ?? a.r));
+        const rBot = (a.rBot ?? a.r) + t * ((b.rBot ?? b.r) - (a.rBot ?? a.r));
+        const signedLat = (ox * vy - oy * vx) / Math.sqrt(lSq);
+        const activeR = signedLat < 0 ? rTop : rBot;
+        const norm = dist / activeR;
+        if (dist <= activeR && norm < bestNorm) {
+          bestNorm = norm;
+          best = {
+            u: a.u !== undefined ? (a.u + t * (b.u - a.u)) : ((i + t) / (pts.length - 1)),
+            dist, activeR, latFrac: signedLat / activeR,
+            nx: (sx - cx) / activeR, ny: (sy - cy) / activeR
+          };
+        }
+      }
+      return best;
+    }
+
+    function renderTulkun(canvas, commits, coat, phase, viewMode) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const img = ctx.createImageData(W, H);
+      const data = img.data;
+      const bio = getBio(commits);
+      const bodyLen = bio.bodyLen, maxRadius = bio.maxRadius;
+      const N = Math.max(36, Math.round(bodyLen));
+      const spine = [];
+      const dir = viewMode === 'dive' ? 1 : -1;
+      const startX = W * 0.50 + dir * (bodyLen * 0.42);
+      const centerY = H * 0.44;
+      const pitchAngle = Math.cos(phase) * 0.065;
+      const waveAmp = maxRadius * 0.62;
+
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1);
+        const x = startX - dir * (u * bodyLen);
+        const headBob = Math.sin(phase) * (maxRadius * 0.14) * Math.pow(1 - u, 1.3);
+        const tailStroke = Math.sin(u * Math.PI * 2.35 - phase) * waveAmp * Math.pow(u, 0.92);
+        const pitchOffset = (u - 0.35) * bodyLen * Math.sin(pitchAngle);
+        let y = centerY + headBob + tailStroke + pitchOffset;
+        if (viewMode === 'dive') {
+          y += -Math.sin(u * Math.PI * 0.92) * (maxRadius * 1.05) + (u < 0.45 ? Math.pow((0.45 - u) / 0.45, 1.4) * (maxRadius * 0.70) : 0);
+        }
+        let rTop, rBot;
+        if (u < 0.24) {
+          const hu = u / 0.24;
+          rTop = maxRadius * lerp(0.38, 0.92, Math.pow(hu, 0.55));
+          const calfBump = Math.sin(hu * Math.PI) * (maxRadius * 0.16);
+          const femWedge = Math.pow(Math.max(0, 1 - hu), 1.2) * Math.sin(Math.min(1, hu * 4) * 1.57) * (maxRadius * 0.65);
+          const bullCrest = hu < 0.45 ? Math.sin((hu / 0.45) * 1.57) * (maxRadius * 1.35) : Math.pow(Math.max(0, (1 - hu) / 0.55), 1.6) * (maxRadius * 0.75);
+          if (viewMode !== 'top') {
+            rTop += calfBump * (1 - bio.femalePhase) + femWedge * bio.femalePhase * (1 - bio.bullPhase * 0.4) + bullCrest * bio.bullPhase;
+          }
+          rBot = maxRadius * lerp(0.32, 0.96, Math.sin(Math.min(1, hu * 1.3) * 1.57));
+        } else if (u < 0.68) {
+          const env = Math.cos(((u - 0.24) / 0.44) * Math.PI * 0.48);
+          rTop = maxRadius * 0.95 * env; rBot = maxRadius * 0.98 * env;
+        } else {
+          const taper = lerp(0.48, 0.13, Math.pow((u - 0.68) / 0.32, 0.85));
+          rTop = maxRadius * taper; rBot = maxRadius * taper;
+        }
+        spine.push({ x, y, rTop: Math.max(1.2, rTop), rBot: Math.max(1.2, rBot), r: (rTop + rBot) * 0.5, u });
+      }
+
+      const getPt = (uVal) => spine[Math.min(spine.length - 1, Math.max(0, Math.round(uVal * (spine.length - 1))))];
+      const parts = [];
+      const finScale = bio.finStubbiness;
+      const wingFlap = Math.sin(phase - 0.65) * (maxRadius * 0.78);
+      const auxFlap = Math.cos(phase - 0.95) * (maxRadius * 0.42);
+      const flukeWhip = Math.cos(phase - 2.05) * (maxRadius * 0.72);
+
+      if (viewMode === 'top') {
+        for (const side of [-1, 1]) {
+          const mainRoot = getPt(0.38), mainLen = maxRadius * 3.1 * finScale;
+          parts.push({ z: 3, kind: 'mainWing', pts: [
+            { x: mainRoot.x, y: mainRoot.y + side * mainRoot.r * 0.75, r: maxRadius * 0.42 },
+            { x: mainRoot.x - dir * (mainLen * 0.5 + wingFlap * 0.5), y: mainRoot.y + side * (mainRoot.r + mainLen * 0.75), r: maxRadius * 0.28 },
+            { x: mainRoot.x - dir * (mainLen * 0.95 + wingFlap), y: mainRoot.y + side * (mainRoot.r + mainLen * 1.12), r: 1.0 }
+          ]});
+          const cRoot = getPt(0.96), cLen = maxRadius * 2.1 * finScale;
+          parts.push({ z: 2, kind: 'fluke', pts: [
+            { x: cRoot.x, y: cRoot.y + side * 1.5, r: maxRadius * 0.26 },
+            { x: cRoot.x - dir * cLen * 1.0, y: cRoot.y + side * cLen * 0.7 + flukeWhip * 0.5, r: 1.0 }
+          ]});
+        }
+      } else {
+        const opRoot = getPt(0.24), opLen = maxRadius * 1.15 * finScale;
+        parts.push({ z: 3, kind: 'opercular', pts: [
+          { x: opRoot.x, y: opRoot.y + opRoot.rBot * 0.35, r: maxRadius * 0.28 },
+          { x: opRoot.x - dir * opLen * 0.55, y: opRoot.y + opRoot.rBot * 0.35 + opLen * 0.95 + auxFlap, r: 1.1 }
+        ]});
+        if (bio.kuruScale > 0.05) {
+          const kEnd = getPt(0.44);
+          parts.push({ z: 2, kind: 'kuru', pts: [
+            { x: opRoot.x - dir * 3, y: opRoot.y + opRoot.rBot * 0.85, r: 1.2 },
+            { x: (opRoot.x + kEnd.x) * 0.5, y: opRoot.y + opRoot.rBot * 1.25 + 3 + auxFlap * 0.6, r: 1.0 },
+            { x: kEnd.x, y: kEnd.y + kEnd.rBot * 0.75, r: 0.9 }
+          ]});
+        }
+        const mainRoot = getPt(0.38), wingLen = maxRadius * 3.45 * finScale;
+        parts.push({ z: 4, kind: 'mainWing', pts: [
+          { x: mainRoot.x, y: mainRoot.y + mainRoot.rBot * 0.22, r: maxRadius * 0.42 },
+          { x: mainRoot.x - dir * wingLen * 0.5, y: mainRoot.y + wingLen * 0.42 + wingFlap * 0.55, r: maxRadius * 0.30 },
+          { x: mainRoot.x - dir * wingLen * 1.02, y: mainRoot.y + wingLen * 0.72 + wingFlap * 1.15, r: 1.1 }
+        ]});
+        const tailRoot = getPt(0.96), fLen = maxRadius * 2.15 * finScale;
+        parts.push({ z: -1, kind: 'fluke', pts: [
+          { x: tailRoot.x, y: tailRoot.y, r: tailRoot.r * 0.9 },
+          { x: tailRoot.x - dir * fLen * 0.98, y: tailRoot.y - fLen * 0.20 + flukeWhip, r: 0.9 }
+        ]});
+        parts.push({ z: 2, kind: 'fluke', pts: [
+          { x: tailRoot.x, y: tailRoot.y + 1, r: tailRoot.r * 0.95 },
+          { x: tailRoot.x - dir * fLen * 1.05, y: tailRoot.y + fLen * 0.32 + flukeWhip, r: 0.9 }
+        ]});
+      }
+
+      const fitScale = 0.78;
+      const targetCX = W * 0.52 + Math.sin(phase) * 4.0;
+      const targetCY = (H - 22) * 0.46 + Math.cos(phase) * 1.8;
+      for (const p of spine) {
+        p.x = targetCX + (p.x - W * 0.5) * fitScale;
+        p.y = targetCY + (p.y - H * 0.44) * fitScale;
+        p.rTop *= fitScale; p.rBot *= fitScale; p.r *= fitScale;
+      }
+      for (const part of parts) {
+        for (const p of part.pts) {
+          p.x = targetCX + (p.x - W * 0.5) * fitScale;
+          p.y = targetCY + (p.y - H * 0.44) * fitScale;
+          p.r *= fitScale;
+        }
+      }
+
+      const LIGHT = [-0.30, -0.62, 0.72];
+      const fgParts = parts.filter(p => p.z > 0);
+      const bgParts = parts.filter(p => p.z < 0);
+
+      function shadePart(part, s, px, py, pIdx) {
+        let ramp = (part.kind === 'mainWing' || part.kind === 'opercular') && (s.u > 0.62 || Math.abs(s.latFrac) > 0.38)
+          ? coat.cream : (bio.maturity < 0.4 ? coat.calfBlue : coat.armor);
+        if (part.kind === 'kuru') ramp = coat.calfBlue;
+        if (s.dist > s.activeR - 0.7 && s.activeR > 1.6) {
+          const c = ramp[0]; data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255; return;
+        }
+        const nz = Math.sqrt(Math.max(0, 1 - (s.nx * s.nx + s.ny * s.ny)));
+        const bright = 0.26 + 0.72 * Math.max(0, s.nx * LIGHT[0] + s.ny * LIGHT[1] + nz * LIGHT[2]);
+        const c = chooseShade(ramp, bright, px, py);
+        data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255;
+      }
+
+      for (let py = 2; py < H - 2; py++) {
+        for (let px = 2; px < W - 2; px++) {
+          const sx = px + 0.5, sy = py + 0.5, pIdx = (py * W + px) * 4;
+          let hit = false;
+          for (const part of fgParts) {
+            const s = sampleChain(part.pts, sx, sy);
+            if (s) { shadePart(part, s, px, py, pIdx); hit = true; break; }
+          }
+          if (hit) continue;
+          const b = sampleChain(spine, sx, sy);
+          if (b) {
+            if (viewMode !== 'top' && bio.bullPhase > 0.35 && b.u > 0.08 && b.u < 0.18 && b.ny < -0.55 && (b.u - 0.08) / 0.10 < 0.65 * bio.bullPhase) continue;
+            let ramp = bio.maturity < 0.38 ? coat.calfBlue : coat.armor;
+            if (b.ny > 0.12) ramp = (bio.maturity < 0.55 || b.u < 0.35) ? coat.cream : coat.calfBlue;
+            if (b.u < 0.18 && b.ny < -0.38) ramp = coat.crestRed;
+            if (viewMode !== 'top' && Math.abs(b.u - 0.185) * bodyLen * fitScale < 2.2 && Math.abs(b.ny - 0.02) * b.activeR < 2.2) {
+              data[pIdx] = 240; data[pIdx+1] = 175; data[pIdx+2] = 95; data[pIdx+3] = 255; continue;
+            }
+            const nz = Math.sqrt(Math.max(0, 1 - (b.nx * b.nx + b.ny * b.ny)));
+            const bright = 0.24 + 0.74 * Math.max(0, b.nx * LIGHT[0] + b.ny * LIGHT[1] + nz * LIGHT[2]);
+            const c = chooseShade(ramp, bright, px, py);
+            data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255;
+            continue;
+          }
+          for (const part of bgParts) {
+            const s = sampleChain(part.pts, sx, sy);
+            if (s) { shadePart(part, s, px, py, pIdx); break; }
+          }
+        }
+      }
+
+      // 1px outline
+      const mask = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) mask[i] = data[i * 4 + 3];
+      for (let py = 2; py < H - 2; py++) {
+        for (let px = 2; px < W - 2; px++) {
+          const i = py * W + px;
+          if (mask[i] !== 0) continue;
+          if (mask[i - 1] || mask[i + 1] || mask[i - W] || mask[i + W]) {
+            const pIdx = i * 4;
+            data[pIdx] = OUTLINE_COLOR[0]; data[pIdx+1] = OUTLINE_COLOR[1]; data[pIdx+2] = OUTLINE_COLOR[2]; data[pIdx+3] = 255;
+          }
+        }
+      }
+
+      ctx.putImageData(img, 0, 0);
+      ctx.fillStyle = "#f0f6fc";
+      ctx.font = "bold 7px monospace";
+      ctx.fillText("AVATAR: TULKUN", 8, H - 11);
+      ctx.fillStyle = "#58a6ff";
+      ctx.fillText(`CONTRIBUTIONS: ${commits}`, 8, H - 3);
+    }
+
+    let primaryUser = "PramudithaN";
+    let primaryCommits = 140;
+    let primaryCoat = buildCoatFromColors();
+    let friendUser = "";
+    let friendCommits = 62;
+    let friendCoat = buildCoatFromColors([222,165,132], [49,120,198], [65,184,131]);
+    let currentView = "side";
+    let phase = 0;
+
+    function updateSnippets() {
+      const yaml = `name: Update Tulkun
+on:
+  schedule: [{ cron: "0 0 * * *" }]
+  workflow_dispatch:
+  push: { branches: [main] }
+permissions:
+  contents: write
+jobs:
+  tulkun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PramudithaN/git-tulkun@v1
+        with:
+          view: ${currentView}
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tulkun/
+          git diff --cached --quiet || git commit -m "chore: update Tulkun"
+          git push`;
+      const md = `<p align="center">
+  <a href="https://github.com/PramudithaN/git-tulkun">
+    <img src="tulkun/tulkun.gif" width="640" alt="${primaryUser}'s GitHub Tulkun" />
+  </a>
+</p>`;
+      document.getElementById("yamlCode").textContent = yaml;
+      document.getElementById("mdCode").textContent = md;
+      document.getElementById("primaryCaption").textContent = `@${primaryUser} — ${getStageTitle(primaryCommits)} (${primaryCommits} contributions)`;
+    }
+
+    async function fetchGitHubProfile(login, isFriend = false) {
+      try {
+        const res = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}/repos?per_page=30&sort=updated`);
+        if (!res.ok) return;
+        const repos = await res.json();
+        const counts = {};
+        for (const r of repos) {
+          if (r.language && LANG_COLORS[r.language]) counts[r.language] = (counts[r.language] || 0) + 1;
+        }
+        const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+        const c1 = LANG_COLORS[top[0]] || [49,120,198];
+        const c2 = LANG_COLORS[top[1]] || [222,165,132];
+        const c3 = LANG_COLORS[top[2]] || [53,114,165];
+        const estCommits = Math.min(150, Math.max(12, repos.length * 4));
+        if (isFriend) {
+          friendUser = login;
+          friendCommits = estCommits;
+          friendCoat = buildCoatFromColors(c1, c2, c3);
+          document.getElementById("friendCaption").textContent = `@${friendUser} — ${getStageTitle(friendCommits)} (~${friendCommits} contributions)`;
+          document.getElementById("friendCard").classList.remove("hidden");
+          document.getElementById("canvasGrid").className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+        } else {
+          primaryUser = login;
+          primaryCommits = estCommits;
+          primaryCoat = buildCoatFromColors(c1, c2, c3);
+          document.getElementById("commitSlider").value = primaryCommits;
+          document.getElementById("commitReadout").textContent = primaryCommits;
+          updateSnippets();
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById("fetchUserBtn").addEventListener("click", () => {
+      const u = document.getElementById("userInput").value.trim();
+      if (u) fetchGitHubProfile(u, false);
+    });
+    document.getElementById("compareBtn").addEventListener("click", () => {
+      const f = document.getElementById("friendInput").value.trim();
+      if (f) fetchGitHubProfile(f, true);
+    });
+    document.getElementById("commitSlider").addEventListener("input", (e) => {
+      primaryCommits = parseInt(e.target.value, 10);
+      document.getElementById("commitReadout").textContent = primaryCommits;
+      updateSnippets();
+    });
+    document.getElementById("viewSelect").addEventListener("change", (e) => {
+      currentView = e.target.value;
+      updateSnippets();
+    });
+    document.getElementById("copyYamlBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(document.getElementById("yamlCode").textContent);
+    });
+    document.getElementById("copyMdBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(document.getElementById("mdCode").textContent);
+    });
+    document.getElementById("downloadShareBtn").addEventListener("click", () => {
+      const shareCanvas = document.createElement("canvas");
+      shareCanvas.width = 1280;
+      shareCanvas.height = 640;
+      const sctx = shareCanvas.getContext("2d");
+      sctx.imageSmoothingEnabled = false;
+      sctx.fillStyle = "#0d1117";
+      sctx.fillRect(0, 0, 1280, 640);
+      sctx.drawImage(document.getElementById("mainCanvas"), 40, 60, 1200, 525);
+      const a = document.createElement("a");
+      a.download = `${primaryUser}-tulkun-this-year.png`;
+      a.href = shareCanvas.toDataURL("image/png");
+      a.click();
+    });
+
+    function animate() {
+      phase += 0.12;
+      renderTulkun(document.getElementById("mainCanvas"), primaryCommits, primaryCoat, phase, currentView);
+      if (friendUser) {
+        renderTulkun(document.getElementById("friendCanvas"), friendCommits, friendCoat, phase + 1.2, currentView);
+      }
+      setTimeout(() => requestAnimationFrame(animate), 66);
+    }
+
+    updateSnippets();
+    animate();
+  </script>
+</body>
+</html>

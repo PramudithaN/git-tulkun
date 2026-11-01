@@ -5,7 +5,8 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::render::{
-    FRAMES_PER_SECOND, FRAME_HEIGHT_PIXELS, FRAME_WIDTH_PIXELS, TulkunFrame,
+    FRAMES_PER_SECOND, FRAME_HEIGHT_PIXELS, FRAME_WIDTH_PIXELS, SHARE_CARD_HEIGHT_PIXELS,
+    SHARE_CARD_WIDTH_PIXELS, TulkunFrame,
 };
 
 /// Each native pixel becomes `2x2` exported pixels so the pixel art stays razor-sharp.
@@ -13,20 +14,51 @@ pub const EXPORT_SCALE: u32 = 2;
 pub const EXPORT_WIDTH: u32 = FRAME_WIDTH_PIXELS * EXPORT_SCALE;
 pub const EXPORT_HEIGHT: u32 = FRAME_HEIGHT_PIXELS * EXPORT_SCALE;
 
+/// Share card scale (320x160 * 4 = 1280x640, exact GitHub Social Preview & X/LinkedIn card dimensions).
+pub const SHARE_CARD_SCALE: u32 = 4;
+pub const SHARE_CARD_EXPORT_WIDTH: u32 = SHARE_CARD_WIDTH_PIXELS * SHARE_CARD_SCALE;
+pub const SHARE_CARD_EXPORT_HEIGHT: u32 = SHARE_CARD_HEIGHT_PIXELS * SHARE_CARD_SCALE;
+
 const GIF_COLOR_LIMIT: usize = 255;
 const GIF_TRANSPARENT_INDEX: u8 = 0;
 
 /// Encode a static PNG by repeating each native pixel `EXPORT_SCALE` times in X and Y.
 pub fn encode_png(frame: &TulkunFrame) -> Result<Vec<u8>, String> {
-    let mut export_pixels = vec![[0_u8; 4]; (EXPORT_WIDTH * EXPORT_HEIGHT) as usize];
+    encode_scaled_rgba_png(
+        &frame.rgba_pixels,
+        FRAME_WIDTH_PIXELS,
+        FRAME_HEIGHT_PIXELS,
+        EXPORT_SCALE,
+    )
+}
+
+/// Encode a 1280x640 social preview & annual evolution share card PNG from a 320x160 pixel buffer.
+pub fn encode_share_card_png(native_pixels: &[[u8; 4]]) -> Result<Vec<u8>, String> {
+    encode_scaled_rgba_png(
+        native_pixels,
+        SHARE_CARD_WIDTH_PIXELS,
+        SHARE_CARD_HEIGHT_PIXELS,
+        SHARE_CARD_SCALE,
+    )
+}
+
+fn encode_scaled_rgba_png(
+    native_pixels: &[[u8; 4]],
+    native_w: u32,
+    native_h: u32,
+    scale: u32,
+) -> Result<Vec<u8>, String> {
+    let out_w = native_w * scale;
+    let out_h = native_h * scale;
+    let mut export_pixels = vec![[0_u8; 4]; (out_w * out_h) as usize];
     for (idx, px) in export_pixels.iter_mut().enumerate() {
-        let nx = (idx as u32 % EXPORT_WIDTH) / EXPORT_SCALE;
-        let ny = (idx as u32 / EXPORT_WIDTH) / EXPORT_SCALE;
-        *px = frame.rgba_pixels[(ny * FRAME_WIDTH_PIXELS + nx) as usize];
+        let nx = (idx as u32 % out_w) / scale;
+        let ny = (idx as u32 / out_w) / scale;
+        *px = native_pixels[(ny * native_w + nx) as usize];
     }
 
     let mut png_bytes = Vec::new();
-    let mut encoder = png::Encoder::new(&mut png_bytes, EXPORT_WIDTH, EXPORT_HEIGHT);
+    let mut encoder = png::Encoder::new(&mut png_bytes, out_w, out_h);
     encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().map_err(|e| e.to_string())?;
