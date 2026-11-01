@@ -14,7 +14,7 @@ pub const FRAME_HEIGHT_PIXELS: u32 = 140;
 /// Animation frame rate (15 FPS).
 pub const FRAMES_PER_SECOND: u32 = 15;
 /// Total frames in one seamless deep-ocean swimming loop (75 frames = 5.0 seconds per slow cycle).
-pub const LOOP_FRAME_COUNT: u32 = 60;
+pub const LOOP_FRAME_COUNT: u32 = 48;
 
 pub const OUTLINE_COLOR: [u8; 4] = [15, 18, 26, 255];
 
@@ -270,6 +270,7 @@ pub fn render_swim_frame(
     let mut ref_min_y = f64::INFINITY;
     let mut ref_max_x = f64::NEG_INFINITY;
     let mut ref_max_y = f64::NEG_INFINITY;
+    for step in 0..8 { let (s_spine, s_parts) = build_pose_geometry(&bio, view, TAU * (step as f64 / 8.0), w, h); for p in &s_spine { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0); ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0); } for part in &s_parts { for p in &part.pts { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r - 4.0); ref_max_y = ref_max_y.max(p.y + p.r + 4.0); } } }
 
     for p in &rest_spine {
         ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
@@ -297,8 +298,8 @@ pub fn render_swim_frame(
     let ref_cy = (ref_min_y + ref_max_y) * 0.5;
 
     // Subtle, majestic deep-ocean glide drift (only 6px horizontal, 1.5px vertical)
-    let glide_x = loop_turn.sin() * 11.0;
-    let glide_y = loop_turn.cos() * 3.5;
+    let glide_x = loop_turn.sin() * 5.0;
+    let glide_y = loop_turn.cos() * 2.5;
     let target_cx = f64::from(w) * 0.52 + glide_x;
     let target_cy = (f64::from(h) - hud_reserved_bottom) * 0.48 + glide_y;
 
@@ -547,16 +548,16 @@ fn build_pose_geometry(
     let center_y = f64::from(h) * 0.44;
 
     // Realistic, slow, heavy cetacean physics (single 1x harmonic per 75-frame cycle, ~75% lower amplitude!)
-    let pitch_angle = loop_turn.cos() * 0.042;
-    let wave_amp = max_radius * 0.34;
+    let pitch_angle = loop_turn.cos() * 0.065;
+    let wave_amp = max_radius * 0.62;
 
     for i in 0..n_pts {
         let u = i as f64 / (n_pts - 1) as f64;
         let x = start_x - dir * (u * body_len);
 
         // Heavy head stays steady; smooth single-harmonic traveling wave glides down the tail stock
-        let head_bob = loop_turn.sin() * (max_radius * 0.09) * (1.0 - u);
-        let tail_stroke = (u * PI * 1.85 - loop_turn).sin() * wave_amp * u.powf(1.25);
+        let head_bob = loop_turn.sin() * (max_radius * 0.14) * (1.0 - u).powf(1.3);
+        let tail_stroke = (u * PI * 2.35 - loop_turn).sin() * wave_amp * u.powf(0.92);
         let pitch_offset = (u - 0.35) * body_len * pitch_angle.sin();
 
         let mut y = center_y + head_bob + tail_stroke + pitch_offset;
@@ -621,9 +622,9 @@ fn build_pose_geometry(
     let mut parts = Vec::new();
     let fin_scale = bio.fin_stubbiness;
     // Slow, graceful deep-ocean fin sculling (1x loop_turn instead of 2x, gentle amplitude)
-    let wing_flap = (loop_turn - 0.65).sin() * (max_radius * 0.50);
-    let aux_flap = (loop_turn - 0.95).cos() * (max_radius * 0.26);
-    let fluke_whip = (loop_turn - 1.95).cos() * (max_radius * 0.44);
+    let wing_flap = (loop_turn - 0.65).sin() * (max_radius * 0.78);
+    let aux_flap = (loop_turn - 0.95).cos() * (max_radius * 0.42);
+    let fluke_whip = (loop_turn - 2.05).cos() * (max_radius * 0.72);
 
     if view == CameraView::Top {
         for side in [-1.0, 1.0] {

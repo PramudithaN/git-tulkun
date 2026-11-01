@@ -7,9 +7,9 @@
 > Draw a procedural pixel-art Pandoran **Tulkun** leviathan whale from a GitHub account's commits and language colors, rendered as a seamless 15 FPS looping GIF for your GitHub profile `README.md`.
 
 <p align="center">
-  <img src="tulkun/tulkun.gif" width="640" alt="Live GitTulkun rendered from @PramudithaN's GitHub activity" />
+  <img src="tulkun/tulkun.gif?v=4" width="640" alt="Live GitTulkun rendered from @PramudithaN's GitHub activity" />
   <br />
-  <em>Live Tulkun generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s public GitHub activity (1,059 contributions • Adult Male Bull)</em>
+  <em>Live Tulkun generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s public GitHub activity (1,067 contributions - Adult Male Bull)</em>
 </p>
 
 ---
@@ -20,11 +20,11 @@ Every commit you push to GitHub feeds your Tulkun's anatomical growth. Instead o
 
 | Stage | Commits Needed | Live 15 FPS Animation | Biological Changes Unlocked |
 | :--- | :---: | :---: | :--- |
-| **Stage 1**<br/>**Baby Calf** | **`1 – 14`**<br/>commits | <img src="docs/stage1-calf/tulkun.gif" width="320" alt="Stage 1 Baby Calf" /> | • Chubby, higher body-fat ratio (`64px` spine)<br/>• Blunt teal-blue snout with a flat oval sensor dimple<br/>• Light cream dorsal swirl patches & bright cream belly<br/>• Stubby agile fins & **pale cream tail flukes** |
-| **Stage 2**<br/>**Yearling Calf** | **`15 – 39`**<br/>commits | <img src="docs/stage2-yearling/tulkun.gif" width="320" alt="Stage 2 Yearling Calf" /> | • Spine lengthens (`95px`) and slims down<br/>• **Kuru neural whips** sprout behind the anterior opercular flippers<br/>• Tail flukes begin filling in with dark pigment at the base |
-| **Stage 3**<br/>**Adolescent** | **`40 – 74`**<br/>commits | <img src="docs/stage3-adolescent/tulkun.gif" width="320" alt="Stage 3 Adolescent" /> | • **Sensor crest** begins rising and sloping forward<br/>• All **6 pectoral & ventral flippers** elongate with crisp white leading edges<br/>• Secondary **pelvic accessory paddles** widen under the tail stock |
-| **Stage 4**<br/>**Adult Female** | **`75 – 114`**<br/>commits | <img src="docs/stage4-female/tulkun.gif" width="320" alt="Stage 4 Adult Female" /> | • Dark charcoal carapace armor replaces the pale calf dorsal patches<br/>• Forward-jutting **sloped maroon sensor crest** with an olive-gold front tip<br/>• **5 sharp sawtooth jaw triangles** & segmented cerulean tail pleats |
-| **Stage 5**<br/>**Adult Male Bull** | **`115+`**<br/>commits | <img src="docs/stage5-bull/tulkun.gif" width="320" alt="Stage 5 Adult Male Bull" /> | • Maximum **`186px` leviathan length** & full scythe-wing span<br/>• Towering vertical **hooked hammer-crest** with concave rear overhang<br/>• **6 serrated jaw triangles** & white carapace battle-scars |
+| **Stage 1**<br/>**Baby Calf** | **`1 – 14`**<br/>commits | <img src="docs/stage1-calf/tulkun.gif?v=4" width="320" alt="Stage 1 Baby Calf" /> | Chubby `64px` spine, blunt teal-blue snout with flat oval sensor dimple, light cream dorsal swirl patches, bright cream belly, and stubby agile fins with **pale cream tail flukes**. |
+| **Stage 2**<br/>**Yearling Calf** | **`15 – 39`**<br/>commits | <img src="docs/stage2-yearling/tulkun.gif?v=4" width="320" alt="Stage 2 Yearling Calf" /> | Spine lengthens (`95px`) and slims down; **kuru neural whips** sprout behind the anterior opercular flippers while tail flukes begin filling in with dark pigment at the base. |
+| **Stage 3**<br/>**Adolescent** | **`40 – 74`**<br/>commits | <img src="docs/stage3-adolescent/tulkun.gif?v=4" width="320" alt="Stage 3 Adolescent" /> | **Sensor crest** rises and slopes forward; all **6 pectoral & ventral flippers** elongate with crisp white leading edges, and secondary **pelvic accessory paddles** widen under the tail stock. |
+| **Stage 4**<br/>**Adult Female** | **`75 – 114`**<br/>commits | <img src="docs/stage4-female/tulkun.gif?v=4" width="320" alt="Stage 4 Adult Female" /> | Dark charcoal carapace armor replaces the pale calf dorsal patches; forward-jutting **sloped maroon sensor crest** with an olive-gold front tip, **5 sharp sawtooth jaw triangles**, and segmented cerulean tail pleats. |
+| **Stage 5**<br/>**Adult Male Bull** | **`115+`**<br/>commits | <img src="docs/stage5-bull/tulkun.gif?v=4" width="320" alt="Stage 5 Adult Male Bull" /> | Maximum **`186px` leviathan length** & full scythe-wing span; towering vertical **hooked hammer-crest** with concave rear overhang, **6 serrated jaw triangles**, and white carapace battle-scars. |
 
 ---
 
@@ -34,9 +34,9 @@ You can render your Tulkun from **3 different camera angles** using the `view` i
 
 | Camera Mode | Live Animated Preview | Description |
 | :--- | :---: | :--- |
-| **`view: side`**<br/>*(Default)* | <img src="docs/stage5-bull/tulkun.gif" width="360" alt="Side Profile Swim" /> | **Lateral Side Swim**: Best view to showcase the hooked hammer-crest, serrated jaw war-stripes, looping *kuru* whip, and vertical tail up/down strokes. |
-| **`view: dive`** | <img src="docs/view-dive/tulkun.gif" width="360" alt="3/4 Dynamic Dive" /> | **3/4 Dynamic Dive (*Payakan* Pose)**: Shows the arched dorsal carapace, split crimson-lined lateral head scoop, and sweeping foreground scythe flipper. |
-| **`view: top`** | <img src="docs/view-top/tulkun.gif" width="360" alt="Top-Down Dorsal Swim" /> | **Dorsal Top-Down Swim**: Shows the full 10-limb wingspan (opercular fins, primary scythe wings, trailing *kuru* whips, pelvic paddles, and forked caudal flukes). |
+| **`view: side`**<br/>*(Default)* | <img src="docs/stage5-bull/tulkun.gif?v=4" width="360" alt="Side Profile Swim" /> | **Lateral Side Swim**: Best view to showcase the hooked hammer-crest, serrated jaw war-stripes, looping *kuru* whip, and vertical tail up/down strokes. |
+| **`view: dive`** | <img src="docs/view-dive/tulkun.gif?v=4" width="360" alt="3/4 Dynamic Dive" /> | **3/4 Dynamic Dive (*Payakan* Pose)**: Shows the arched dorsal carapace, split crimson-lined lateral head scoop, and sweeping foreground scythe flipper. |
+| **`view: top`** | <img src="docs/view-top/tulkun.gif?v=4" width="360" alt="Top-Down Dorsal Swim" /> | **Dorsal Top-Down Swim**: Shows the full 10-limb wingspan (opercular fins, primary scythe wings, trailing *kuru* whips, pelvic paddles, and forked caudal flukes). |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart LR
      - **Tertiary Language (`#3`)** $\rightarrow$ Tints the sensor crest tip highlights.
    - Prefer the movie's exact colors? Set `canon: "true"` (or `--canon` on the CLI):
      <p align="center">
-       <img src="docs/canon-bull/tulkun.gif" width="420" alt="Canon Pandoran Tulkun Palette" />
+       <img src="docs/canon-bull/tulkun.gif?v=4" width="420" alt="Canon Pandoran Tulkun Palette" />
      </p>
 
 2. **3D Cylindrical Normal Lighting & `4×4` Ordered Bayer Dithering (`src/render.rs`)**:
@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Tulkun GIF & PNG
-        uses: PramudithaN/git-tulkun@v0.1.3
+        uses: PramudithaN/git-tulkun@v0.1.4
         with:
           login: ${{ github.repository_owner }}
           view: side        # Options: side | dive | top
