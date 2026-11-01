@@ -1,6 +1,6 @@
 //! Full-body procedural pixel-art Tulkun renderer (Baby Calf -> Yearling -> Adolescent -> Adult Female -> Adult Male Bull)
-//! with 15 FPS cetacean swimming physics, flapping pectoral scythe-wings, trailing kuru neural whips,
-//! dual tail flukes, and 4x4 ordered Bayer dithering.
+//! with realistic deep-ocean cetacean swimming physics (slow, heavy, majestic), flapping pectoral scythe-wings,
+//! trailing kuru neural whips, dual tail flukes, 4x4 ordered Bayer dithering, and bottom-left pixel-art HUD metrics.
 
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
@@ -11,10 +11,10 @@ use crate::history::AccountSnapshot;
 pub const FRAME_WIDTH_PIXELS: u32 = 320;
 /// Native canvas height in pixels (exported at 2x scale = 280px).
 pub const FRAME_HEIGHT_PIXELS: u32 = 140;
-/// Animation frame rate (15 FPS, matching `git-koi`).
+/// Animation frame rate (15 FPS).
 pub const FRAMES_PER_SECOND: u32 = 15;
-/// Total frames in one seamless swimming loop (45 frames = 3.0 seconds).
-pub const LOOP_FRAME_COUNT: u32 = 45;
+/// Total frames in one seamless deep-ocean swimming loop (75 frames = 5.0 seconds per slow cycle).
+pub const LOOP_FRAME_COUNT: u32 = 75;
 
 pub const OUTLINE_COLOR: [u8; 4] = [15, 18, 26, 255];
 
@@ -186,7 +186,7 @@ fn smooth_noise(x: f64, y: f64, seed: u64) -> f64 {
 fn sample_chain(pts: &[SpineNode], sx: f64, sy: f64) -> Option<SampleHit> {
     let mut best_norm = f64::INFINITY;
     let mut best = None;
-    for (i, seg) in pts.windows(2).enumerate() {
+    for seg in pts.windows(2) {
         let a = seg[0];
         let b = seg[1];
         let vx = b.x - a.x;
@@ -219,7 +219,6 @@ fn sample_chain(pts: &[SpineNode], sx: f64, sy: f64) -> Option<SampleHit> {
                 ny: (sy - cy) / active_r,
             });
         }
-        let _ = i;
     }
     best
 }
@@ -241,10 +240,10 @@ pub fn render_still_frame(
     coat: &TulkunCoat,
     view: CameraView,
 ) -> TulkunFrame {
-    render_swim_frame(snapshot, coat, view, 8)
+    render_swim_frame(snapshot, coat, view, 12)
 }
 
-/// Render frame `frame_index` (`0..LOOP_FRAME_COUNT`) of the Tulkun's seamless swimming loop.
+/// Render frame `frame_index` (`0..LOOP_FRAME_COUNT`) of the Tulkun's seamless deep-ocean swimming loop.
 pub fn render_swim_frame(
     snapshot: &AccountSnapshot,
     coat: &TulkunCoat,
@@ -255,436 +254,68 @@ pub fn render_swim_frame(
     let h = FRAME_HEIGHT_PIXELS;
     let mut rgba_pixels = vec![[0_u8; 4]; (w * h) as usize];
 
-    // Use either total contributions or monthly contributions (whichever is non-zero)
     let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions).max(1);
     let bio = TulkunBiology::from_commits(effective_commits);
 
-    // Seamless periodic phase in [0, TAU)
+    // Seamless slow 5-second period phase in [0, TAU)
     let loop_turn = TAU * f64::from(frame_index % LOOP_FRAME_COUNT) / f64::from(LOOP_FRAME_COUNT);
 
     let body_len = bio.body_len;
     let max_radius = bio.max_radius;
     let n_pts = (body_len.round() as usize).max(36);
-    let mut spine = Vec::with_capacity(n_pts);
 
-    let dir = if view == CameraView::Dive { 1.0 } else { -1.0 };
-    let start_x = f64::from(w) * 0.50 + dir * (body_len * 0.42);
-    let center_y = f64::from(h) * 0.46;
-    let pitch_angle = loop_turn.cos() * 0.06;
-    let wave_amp = max_radius * 0.36;
+    // Compute fixed reference bounding box at rest (loop_turn = 0) so the camera NEVER jitters or bounces!
+    let (rest_spine, rest_parts) = build_pose_geometry(&bio, view, 0.0, w, h);
+    let mut ref_min_x = f64::INFINITY;
+    let mut ref_min_y = f64::INFINITY;
+    let mut ref_max_x = f64::NEG_INFINITY;
+    let mut ref_max_y = f64::NEG_INFINITY;
 
-    for i in 0..n_pts {
-        let u = i as f64 / (n_pts - 1) as f64;
-        let x = start_x - dir * (u * body_len);
-
-        // Seamless integer harmonic frequencies (1x and 2x loop_turn)
-        let head_bob = loop_turn.sin() * (max_radius * 0.14) * (1.0 - u);
-        let tail_stroke = (u * PI * 2.1 - loop_turn * 2.0).sin() * wave_amp * u.powf(1.15);
-        let pitch_offset = (u - 0.35) * body_len * pitch_angle.sin();
-
-        let mut y = center_y + head_bob + tail_stroke + pitch_offset;
-        if view == CameraView::Dive {
-            let arch = -(u * PI * 0.92).sin() * (max_radius * 1.10)
-                + if u < 0.45 {
-                    ((0.45 - u) / 0.45).powf(1.4) * (max_radius * 0.75)
-                } else {
-                    0.0
-                };
-            y += arch;
-        }
-
-        let (mut r_top, r_bot) = if u < 0.24 {
-            let hu = u / 0.24;
-            let base_top = max_radius * lerp(0.38, 0.92, hu.powf(0.55));
-            let calf_bump = (hu * PI).sin() * (max_radius * 0.16);
-            let fem_wedge =
-                (1.0 - hu).max(0.0).powf(1.2) * ((hu * 4.0).min(1.0) * FRAC_PI_2).sin() * (max_radius * 0.65);
-            let bull_crest = if hu < 0.45 {
-                ((hu / 0.45) * FRAC_PI_2).sin() * (max_radius * 1.35)
-            } else {
-                (((1.0 - hu) / 0.55).max(0.0)).powf(1.6) * (max_radius * 0.75)
-            };
-            let crest_add = if view == CameraView::Top {
-                0.0
-            } else {
-                calf_bump * (1.0 - bio.female_phase)
-                    + fem_wedge * bio.female_phase * (1.0 - bio.bull_phase * 0.4)
-                    + bull_crest * bio.bull_phase
-            };
-            let bot = max_radius * lerp(0.32, 0.96, ((hu * 1.3).min(1.0) * FRAC_PI_2).sin());
-            (base_top + crest_add, bot)
-        } else if u < 0.68 {
-            let mu = (u - 0.24) / 0.44;
-            let env = (mu * PI * 0.48).cos();
-            (max_radius * 0.95 * env, max_radius * 0.98 * env)
-        } else {
-            let tu = (u - 0.68) / 0.32;
-            let taper = lerp(0.48, 0.13, tu.powf(0.85));
-            (max_radius * taper, max_radius * taper)
-        };
-
-        r_top = r_top.max(1.2);
-        let r_bot = r_bot.max(1.2);
-        spine.push(SpineNode {
-            x,
-            y,
-            r_top,
-            r_bot,
-            r: (r_top + r_bot) * 0.5,
-            u,
-        });
+    for p in &rest_spine {
+        ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
+        ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
+        ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0);
+        ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0);
     }
-
-    let get_pt = |u_val: f64| -> SpineNode {
-        let idx = ((u_val * (spine.len() - 1) as f64).round() as usize).min(spine.len() - 1);
-        spine[idx]
-    };
-
-    let mut parts = Vec::new();
-    let fin_scale = bio.fin_stubbiness;
-    let wing_flap = (loop_turn * 2.0 - 0.6).sin() * (max_radius * 0.58);
-    let aux_flap = (loop_turn * 2.0 - 0.9).cos() * (max_radius * 0.28);
-    let fluke_whip = (loop_turn * 2.0 - 2.1).cos() * (max_radius * 0.48);
-
-    if view == CameraView::Top {
-        for side in [-1.0, 1.0] {
-            let op_root = get_pt(0.23);
-            let op_len = max_radius * 1.35 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Opercular,
-                pts: vec![
-                    pt_node(op_root.x, op_root.y + side * op_root.r * 0.75, max_radius * 0.26, 0.0),
-                    pt_node(
-                        op_root.x - dir * (op_len * 0.45 + aux_flap * 0.3),
-                        op_root.y + side * (op_root.r * 0.75 + op_len * 0.85),
-                        max_radius * 0.22,
-                        0.5,
-                    ),
-                    pt_node(
-                        op_root.x - dir * (op_len * 0.75 + aux_flap * 0.6),
-                        op_root.y + side * (op_root.r * 0.75 + op_len * 1.15),
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-
-            let main_root = get_pt(0.38);
-            let main_len = max_radius * 3.45 * fin_scale;
-            parts.push(AppendagePart {
-                z: 3,
-                kind: PartKind::MainWing,
-                pts: vec![
-                    pt_node(main_root.x, main_root.y + side * main_root.r * 0.75, max_radius * 0.42, 0.0),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.28 + wing_flap * 0.3),
-                        main_root.y + side * (main_root.r + main_len * 0.52),
-                        max_radius * 0.36,
-                        0.33,
-                    ),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.68 + wing_flap * 0.7),
-                        main_root.y + side * (main_root.r + main_len * 0.96),
-                        max_radius * 0.22,
-                        0.66,
-                    ),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.98 + wing_flap * 1.1),
-                        main_root.y + side * (main_root.r + main_len * 1.18),
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-
-            if bio.kuru_scale > 0.05 {
-                let k_len = max_radius * 2.6 * bio.kuru_scale;
-                parts.push(AppendagePart {
-                    z: 1,
-                    kind: PartKind::Kuru,
-                    pts: vec![
-                        pt_node(op_root.x - dir * 4.0, op_root.y + side * op_root.r * 0.9, 1.2, 0.0),
-                        pt_node(
-                            op_root.x - dir * k_len * 0.6,
-                            op_root.y + side * (op_root.r * 1.15 + k_len * 0.22 + aux_flap * 0.4),
-                            0.95,
-                            0.5,
-                        ),
-                        pt_node(
-                            op_root.x - dir * k_len * 1.15,
-                            op_root.y + side * (op_root.r * 1.05 + k_len * 0.15 - aux_flap * 0.5),
-                            0.75,
-                            1.0,
-                        ),
-                    ],
-                });
-            }
-
-            let pelv_root = get_pt(0.82);
-            let p_len = max_radius * 1.15 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Fluke,
-                pts: vec![
-                    pt_node(pelv_root.x, pelv_root.y + side * pelv_root.r * 0.6, max_radius * 0.22, 0.0),
-                    pt_node(
-                        pelv_root.x - dir * p_len * 0.65,
-                        pelv_root.y + side * (pelv_root.r + p_len * 0.75),
-                        max_radius * 0.28,
-                        0.5,
-                    ),
-                    pt_node(
-                        pelv_root.x - dir * p_len * 1.0,
-                        pelv_root.y + side * (pelv_root.r + p_len * 0.95),
-                        1.1,
-                        1.0,
-                    ),
-                ],
-            });
-
-            let c_root = get_pt(0.96);
-            let c_len = max_radius * 2.15 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Fluke,
-                pts: vec![
-                    pt_node(c_root.x, c_root.y + side * 1.5, max_radius * 0.26, 0.0),
-                    pt_node(
-                        c_root.x - dir * c_len * 0.55,
-                        c_root.y + side * c_len * 0.48 + fluke_whip * 0.3,
-                        max_radius * 0.34,
-                        0.5,
-                    ),
-                    pt_node(
-                        c_root.x - dir * c_len * 1.05,
-                        c_root.y + side * c_len * 0.72 + fluke_whip * 0.6,
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-        }
-    } else {
-        // Side Profile & 3/4 Dive
-        let op_root = get_pt(0.24);
-        let op_len = max_radius * 1.15 * fin_scale;
-        parts.push(AppendagePart {
-            z: 3,
-            kind: PartKind::Opercular,
-            pts: vec![
-                pt_node(op_root.x, op_root.y + op_root.r_bot * 0.35, max_radius * 0.28, 0.0),
-                pt_node(
-                    op_root.x - dir * op_len * 0.35,
-                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.65 + aux_flap * 0.5,
-                    max_radius * 0.22,
-                    0.5,
-                ),
-                pt_node(
-                    op_root.x - dir * op_len * 0.55,
-                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.95 + aux_flap,
-                    1.1,
-                    1.0,
-                ),
-            ],
-        });
-
-        if bio.kuru_scale > 0.05 {
-            let k_end = get_pt(0.44);
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Kuru,
-                pts: vec![
-                    pt_node(op_root.x - dir * 3.0, op_root.y + op_root.r_bot * 0.85, 1.2, 0.0),
-                    pt_node(
-                        (op_root.x + k_end.x) * 0.5,
-                        op_root.y + op_root.r_bot * 1.25 + 3.5 + aux_flap * 0.6,
-                        1.0,
-                        0.5,
-                    ),
-                    pt_node(k_end.x, k_end.y + k_end.r_bot * 0.75, 0.9, 1.0),
-                ],
-            });
-        }
-
-        let main_root = get_pt(0.38);
-        let wing_len = max_radius * 3.55 * fin_scale;
-        parts.push(AppendagePart {
-            z: 4,
-            kind: PartKind::MainWing,
-            pts: vec![
-                pt_node(main_root.x, main_root.y + main_root.r_bot * 0.22, max_radius * 0.42, 0.0),
-                pt_node(
-                    main_root.x - dir * wing_len * 0.36,
-                    main_root.y + wing_len * 0.28 + wing_flap * 0.35,
-                    max_radius * 0.36,
-                    0.33,
-                ),
-                pt_node(
-                    main_root.x - dir * wing_len * 0.72,
-                    main_root.y + wing_len * 0.54 + wing_flap * 0.75,
-                    max_radius * 0.24,
-                    0.66,
-                ),
-                pt_node(
-                    main_root.x - dir * wing_len * 1.02,
-                    main_root.y + wing_len * 0.72 + wing_flap * 1.15,
-                    1.1,
-                    1.0,
-                ),
-            ],
-        });
-
-        if bio.maturity > 0.22 {
-            let v_root = get_pt(0.45);
-            let v_len = max_radius * 1.85 * fin_scale * bio.maturity;
-            parts.push(AppendagePart {
-                z: -2,
-                kind: PartKind::AuxFlipper,
-                pts: vec![
-                    pt_node(v_root.x, v_root.y + v_root.r_bot * 0.75, max_radius * 0.30, 0.0),
-                    pt_node(
-                        v_root.x - dir * (v_len * 0.12 - aux_flap * 0.3),
-                        v_root.y + v_root.r_bot * 0.75 + v_len * 0.65,
-                        max_radius * 0.22,
-                        0.5,
-                    ),
-                    pt_node(
-                        v_root.x - dir * (v_len * 0.24 - aux_flap * 0.6),
-                        v_root.y + v_root.r_bot * 0.75 + v_len * 1.02,
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-        }
-
-        let pelv_root = get_pt(0.82);
-        let p_scale = max_radius * 1.10 * fin_scale;
-        parts.push(AppendagePart {
-            z: -1,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(pelv_root.x, pelv_root.y + pelv_root.r_bot * 0.6, p_scale * 0.24, 0.0),
-                pt_node(
-                    pelv_root.x - dir * p_scale * 0.55,
-                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.45 + fluke_whip * 0.4,
-                    p_scale * 0.32,
-                    0.5,
-                ),
-                pt_node(
-                    pelv_root.x - dir * p_scale * 0.85,
-                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.62 + fluke_whip * 0.7,
-                    1.1,
-                    1.0,
-                ),
-            ],
-        });
-
-        let tail_root = get_pt(0.96);
-        let f_len = max_radius * 2.20 * fin_scale;
-        parts.push(AppendagePart {
-            z: -1,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(tail_root.x, tail_root.y, tail_root.r * 0.9, 0.0),
-                pt_node(
-                    tail_root.x - dir * f_len * 0.55,
-                    tail_root.y - f_len * 0.14 + fluke_whip * 0.5,
-                    max_radius * 0.25,
-                    0.5,
-                ),
-                pt_node(
-                    tail_root.x - dir * f_len * 0.98,
-                    tail_root.y - f_len * 0.20 + fluke_whip,
-                    0.9,
-                    1.0,
-                ),
-            ],
-        });
-        parts.push(AppendagePart {
-            z: 2,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(tail_root.x, tail_root.y + 1.0, tail_root.r * 0.95, 0.0),
-                pt_node(
-                    tail_root.x - dir * f_len * 0.50,
-                    tail_root.y + f_len * 0.16 + fluke_whip * 0.5,
-                    max_radius * 0.28,
-                    0.5,
-                ),
-                pt_node(
-                    tail_root.x - dir * f_len * 1.05,
-                    tail_root.y + f_len * 0.32 + fluke_whip,
-                    0.9,
-                    1.0,
-                ),
-            ],
-        });
-
-        if view == CameraView::Dive && bio.female_phase > 0.2 {
-            let snout = get_pt(0.03);
-            let s_len = max_radius * 1.65 * bio.female_phase;
-            parts.push(AppendagePart {
-                z: -2,
-                kind: PartKind::CrimsonScoop,
-                pts: vec![
-                    pt_node(snout.x - 4.0, snout.y, max_radius * 0.50, 0.0),
-                    pt_node(snout.x + s_len * 0.55, snout.y - s_len * 0.12, max_radius * 0.62, 0.5),
-                    pt_node(snout.x + s_len * 0.95, snout.y - s_len * 0.22, max_radius * 0.38, 1.0),
-                ],
-            });
-        }
-    }
-
-    // Auto-fit bounding box & apply safe free-roaming offset inside the canvas
-    let mut raw_min_x = f64::INFINITY;
-    let mut raw_min_y = f64::INFINITY;
-    let mut raw_max_x = f64::NEG_INFINITY;
-    let mut raw_max_y = f64::NEG_INFINITY;
-
-    for p in &spine {
-        raw_min_x = raw_min_x.min(p.x - p.r - 2.0);
-        raw_max_x = raw_max_x.max(p.x + p.r + 2.0);
-        raw_min_y = raw_min_y.min(p.y - p.r_top - 2.0);
-        raw_max_y = raw_max_y.max(p.y + p.r_bot + 2.0);
-    }
-    for part in &parts {
+    for part in &rest_parts {
         for p in &part.pts {
-            raw_min_x = raw_min_x.min(p.x - p.r - 2.0);
-            raw_max_x = raw_max_x.max(p.x + p.r + 2.0);
-            raw_min_y = raw_min_y.min(p.y - p.r - 2.0);
-            raw_max_y = raw_max_y.max(p.y + p.r + 2.0);
+            ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
+            ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
+            ref_min_y = ref_min_y.min(p.y - p.r - 4.0);
+            ref_max_y = ref_max_y.max(p.y + p.r + 4.0);
         }
     }
 
-    let margin = 6.0;
-    let raw_w = (raw_max_x - raw_min_x).max(1.0);
-    let raw_h = (raw_max_y - raw_min_y).max(1.0);
-    let fit_scale = ((f64::from(w) - margin * 2.0) / raw_w)
-        .min((f64::from(h) - margin * 2.0) / raw_h)
-        .min(1.0);
-    let raw_cx = (raw_min_x + raw_max_x) * 0.5;
-    let raw_cy = (raw_min_y + raw_max_y) * 0.5;
+    // Reserve bottom 24px for the bottom-left HUD metrics so the whale never overlaps the text
+    let hud_reserved_bottom = 22.0;
+    let avail_w = f64::from(w) - 16.0;
+    let avail_h = f64::from(h) - hud_reserved_bottom - 10.0;
+    let raw_w = (ref_max_x - ref_min_x).max(1.0);
+    let raw_h = (ref_max_y - ref_min_y).max(1.0);
+    let fit_scale = (avail_w / raw_w).min(avail_h / raw_h).min(1.0);
+    let ref_cx = (ref_min_x + ref_max_x) * 0.5;
+    let ref_cy = (ref_min_y + ref_max_y) * 0.5;
 
-    let max_drift_x = (f64::from(w) - margin * 2.0 - raw_w * fit_scale).max(0.0) * 0.45;
-    let max_drift_y = (f64::from(h) - margin * 2.0 - raw_h * fit_scale).max(0.0) * 0.45;
-    let safe_roam_x = loop_turn.sin() * max_drift_x;
-    let safe_roam_y = (loop_turn * 2.0).cos() * max_drift_y.min(4.0);
-    let target_cx = f64::from(w) * 0.5 + safe_roam_x;
-    let target_cy = f64::from(h) * 0.5 + safe_roam_y;
+    // Subtle, majestic deep-ocean glide drift (only 6px horizontal, 1.5px vertical)
+    let glide_x = loop_turn.sin() * 6.0;
+    let glide_y = loop_turn.cos() * 1.5;
+    let target_cx = f64::from(w) * 0.52 + glide_x;
+    let target_cy = (f64::from(h) - hud_reserved_bottom) * 0.48 + glide_y;
+
+    // Build animated pose for current frame
+    let (mut spine, mut parts) = build_pose_geometry(&bio, view, loop_turn, w, h);
 
     for p in &mut spine {
-        p.x = target_cx + (p.x - raw_cx) * fit_scale;
-        p.y = target_cy + (p.y - raw_cy) * fit_scale;
+        p.x = target_cx + (p.x - ref_cx) * fit_scale;
+        p.y = target_cy + (p.y - ref_cy) * fit_scale;
         p.r_top *= fit_scale;
         p.r_bot *= fit_scale;
         p.r *= fit_scale;
     }
     for part in &mut parts {
         for p in &mut part.pts {
-            p.x = target_cx + (p.x - raw_cx) * fit_scale;
-            p.y = target_cy + (p.y - raw_cy) * fit_scale;
+            p.x = target_cx + (p.x - ref_cx) * fit_scale;
+            p.y = target_cy + (p.y - ref_cy) * fit_scale;
             p.r_top *= fit_scale;
             p.r_bot *= fit_scale;
             p.r *= fit_scale;
@@ -869,7 +500,7 @@ pub fn render_swim_frame(
         }
     }
 
-    // 1px Dark Pixel-Art Outline Pass
+    // 1px Dark Pixel-Art Outline Pass around the Tulkun
     let orig = rgba_pixels.clone();
     let stride = w as usize;
     for py in min_y..=max_y {
@@ -888,5 +519,572 @@ pub fn render_swim_frame(
         }
     }
 
+    // Paint subtle drifting deep-ocean bioluminescent plankton motes
+    paint_deep_ocean_motes(&mut rgba_pixels, w, h, loop_turn, coat);
+
+    // Paint Bottom-Left Pixel-Art Metrics HUD: "NAME: TULKEN" & "CONTRIBUTIONS: <count>"
+    paint_metrics_hud(&mut rgba_pixels, w, h, effective_commits, coat);
+
+    let _ = n_pts;
     TulkunFrame { rgba_pixels }
+}
+
+/// Build the spine and appendages for a given `loop_turn` phase (`0..TAU`) with realistic, gentle deep-sea motion.
+fn build_pose_geometry(
+    bio: &TulkunBiology,
+    view: CameraView,
+    loop_turn: f64,
+    w: u32,
+    h: u32,
+) -> (Vec<SpineNode>, Vec<AppendagePart>) {
+    let body_len = bio.body_len;
+    let max_radius = bio.max_radius;
+    let n_pts = (body_len.round() as usize).max(36);
+    let mut spine = Vec::with_capacity(n_pts);
+
+    let dir = if view == CameraView::Dive { 1.0 } else { -1.0 };
+    let start_x = f64::from(w) * 0.50 + dir * (body_len * 0.42);
+    let center_y = f64::from(h) * 0.44;
+
+    // Realistic, slow, heavy cetacean physics (single 1x harmonic per 75-frame cycle, ~75% lower amplitude!)
+    let pitch_angle = loop_turn.cos() * 0.015;
+    let wave_amp = max_radius * 0.11; // Gentle tail peduncle stroke instead of violent whipping
+
+    for i in 0..n_pts {
+        let u = i as f64 / (n_pts - 1) as f64;
+        let x = start_x - dir * (u * body_len);
+
+        // Heavy head stays steady; smooth single-harmonic traveling wave glides down the tail stock
+        let head_bob = loop_turn.sin() * (max_radius * 0.035) * (1.0 - u);
+        let tail_stroke = (u * PI * 1.45 - loop_turn).sin() * wave_amp * u.powf(1.55);
+        let pitch_offset = (u - 0.35) * body_len * pitch_angle.sin();
+
+        let mut y = center_y + head_bob + tail_stroke + pitch_offset;
+        if view == CameraView::Dive {
+            let arch = -(u * PI * 0.92).sin() * (max_radius * 1.05)
+                + if u < 0.45 {
+                    ((0.45 - u) / 0.45).powf(1.4) * (max_radius * 0.70)
+                } else {
+                    0.0
+                };
+            y += arch;
+        }
+
+        let (mut r_top, r_bot) = if u < 0.24 {
+            let hu = u / 0.24;
+            let base_top = max_radius * lerp(0.38, 0.92, hu.powf(0.55));
+            let calf_bump = (hu * PI).sin() * (max_radius * 0.16);
+            let fem_wedge = (1.0 - hu).max(0.0).powf(1.2)
+                * ((hu * 4.0).min(1.0) * FRAC_PI_2).sin()
+                * (max_radius * 0.65);
+            let bull_crest = if hu < 0.45 {
+                ((hu / 0.45) * FRAC_PI_2).sin() * (max_radius * 1.35)
+            } else {
+                (((1.0 - hu) / 0.55).max(0.0)).powf(1.6) * (max_radius * 0.75)
+            };
+            let crest_add = if view == CameraView::Top {
+                0.0
+            } else {
+                calf_bump * (1.0 - bio.female_phase)
+                    + fem_wedge * bio.female_phase * (1.0 - bio.bull_phase * 0.4)
+                    + bull_crest * bio.bull_phase
+            };
+            let bot = max_radius * lerp(0.32, 0.96, ((hu * 1.3).min(1.0) * FRAC_PI_2).sin());
+            (base_top + crest_add, bot)
+        } else if u < 0.68 {
+            let mu = (u - 0.24) / 0.44;
+            let env = (mu * PI * 0.48).cos();
+            (max_radius * 0.95 * env, max_radius * 0.98 * env)
+        } else {
+            let tu = (u - 0.68) / 0.32;
+            let taper = lerp(0.48, 0.13, tu.powf(0.85));
+            (max_radius * taper, max_radius * taper)
+        };
+
+        r_top = r_top.max(1.2);
+        let r_bot = r_bot.max(1.2);
+        spine.push(SpineNode {
+            x,
+            y,
+            r_top,
+            r_bot,
+            r: (r_top + r_bot) * 0.5,
+            u,
+        });
+    }
+
+    let get_pt = |u_val: f64| -> SpineNode {
+        let idx = ((u_val * (spine.len() - 1) as f64).round() as usize).min(spine.len() - 1);
+        spine[idx]
+    };
+
+    let mut parts = Vec::new();
+    let fin_scale = bio.fin_stubbiness;
+    // Slow, graceful deep-ocean fin sculling (1x loop_turn instead of 2x, gentle amplitude)
+    let wing_flap = (loop_turn - 0.6).sin() * (max_radius * 0.18);
+    let aux_flap = (loop_turn - 0.9).cos() * (max_radius * 0.10);
+    let fluke_whip = (loop_turn - 1.9).cos() * (max_radius * 0.16);
+
+    if view == CameraView::Top {
+        for side in [-1.0, 1.0] {
+            let op_root = get_pt(0.23);
+            let op_len = max_radius * 1.35 * fin_scale;
+            parts.push(AppendagePart {
+                z: 2,
+                kind: PartKind::Opercular,
+                pts: vec![
+                    pt_node(op_root.x, op_root.y + side * op_root.r * 0.75, max_radius * 0.26, 0.0),
+                    pt_node(
+                        op_root.x - dir * (op_len * 0.45 + aux_flap * 0.3),
+                        op_root.y + side * (op_root.r * 0.75 + op_len * 0.85),
+                        max_radius * 0.22,
+                        0.5,
+                    ),
+                    pt_node(
+                        op_root.x - dir * (op_len * 0.75 + aux_flap * 0.6),
+                        op_root.y + side * (op_root.r * 0.75 + op_len * 1.15),
+                        1.0,
+                        1.0,
+                    ),
+                ],
+            });
+
+            let main_root = get_pt(0.38);
+            let main_len = max_radius * 3.45 * fin_scale;
+            parts.push(AppendagePart {
+                z: 3,
+                kind: PartKind::MainWing,
+                pts: vec![
+                    pt_node(main_root.x, main_root.y + side * main_root.r * 0.75, max_radius * 0.42, 0.0),
+                    pt_node(
+                        main_root.x - dir * (main_len * 0.28 + wing_flap * 0.3),
+                        main_root.y + side * (main_root.r + main_len * 0.52),
+                        max_radius * 0.36,
+                        0.33,
+                    ),
+                    pt_node(
+                        main_root.x - dir * (main_len * 0.68 + wing_flap * 0.7),
+                        main_root.y + side * (main_root.r + main_len * 0.96),
+                        max_radius * 0.22,
+                        0.66,
+                    ),
+                    pt_node(
+                        main_root.x - dir * (main_len * 0.98 + wing_flap * 1.1),
+                        main_root.y + side * (main_root.r + main_len * 1.18),
+                        1.0,
+                        1.0,
+                    ),
+                ],
+            });
+
+            if bio.kuru_scale > 0.05 {
+                let k_len = max_radius * 2.6 * bio.kuru_scale;
+                parts.push(AppendagePart {
+                    z: 1,
+                    kind: PartKind::Kuru,
+                    pts: vec![
+                        pt_node(op_root.x - dir * 4.0, op_root.y + side * op_root.r * 0.9, 1.2, 0.0),
+                        pt_node(
+                            op_root.x - dir * k_len * 0.6,
+                            op_root.y + side * (op_root.r * 1.15 + k_len * 0.22 + aux_flap * 0.4),
+                            0.95,
+                            0.5,
+                        ),
+                        pt_node(
+                            op_root.x - dir * k_len * 1.15,
+                            op_root.y + side * (op_root.r * 1.05 + k_len * 0.15 - aux_flap * 0.5),
+                            0.75,
+                            1.0,
+                        ),
+                    ],
+                });
+            }
+
+            let pelv_root = get_pt(0.82);
+            let p_len = max_radius * 1.15 * fin_scale;
+            parts.push(AppendagePart {
+                z: 2,
+                kind: PartKind::Fluke,
+                pts: vec![
+                    pt_node(pelv_root.x, pelv_root.y + side * pelv_root.r * 0.6, max_radius * 0.22, 0.0),
+                    pt_node(
+                        pelv_root.x - dir * p_len * 0.65,
+                        pelv_root.y + side * (pelv_root.r + p_len * 0.75),
+                        max_radius * 0.28,
+                        0.5,
+                    ),
+                    pt_node(
+                        pelv_root.x - dir * p_len * 1.0,
+                        pelv_root.y + side * (pelv_root.r + p_len * 0.95),
+                        1.1,
+                        1.0,
+                    ),
+                ],
+            });
+
+            let c_root = get_pt(0.96);
+            let c_len = max_radius * 2.15 * fin_scale;
+            parts.push(AppendagePart {
+                z: 2,
+                kind: PartKind::Fluke,
+                pts: vec![
+                    pt_node(c_root.x, c_root.y + side * 1.5, max_radius * 0.26, 0.0),
+                    pt_node(
+                        c_root.x - dir * c_len * 0.55,
+                        c_root.y + side * c_len * 0.48 + fluke_whip * 0.3,
+                        max_radius * 0.34,
+                        0.5,
+                    ),
+                    pt_node(
+                        c_root.x - dir * c_len * 1.05,
+                        c_root.y + side * c_len * 0.72 + fluke_whip * 0.6,
+                        1.0,
+                        1.0,
+                    ),
+                ],
+            });
+        }
+    } else {
+        let op_root = get_pt(0.24);
+        let op_len = max_radius * 1.15 * fin_scale;
+        parts.push(AppendagePart {
+            z: 3,
+            kind: PartKind::Opercular,
+            pts: vec![
+                pt_node(op_root.x, op_root.y + op_root.r_bot * 0.35, max_radius * 0.28, 0.0),
+                pt_node(
+                    op_root.x - dir * op_len * 0.35,
+                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.65 + aux_flap * 0.5,
+                    max_radius * 0.22,
+                    0.5,
+                ),
+                pt_node(
+                    op_root.x - dir * op_len * 0.55,
+                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.95 + aux_flap,
+                    1.1,
+                    1.0,
+                ),
+            ],
+        });
+
+        if bio.kuru_scale > 0.05 {
+            let k_end = get_pt(0.44);
+            parts.push(AppendagePart {
+                z: 2,
+                kind: PartKind::Kuru,
+                pts: vec![
+                    pt_node(op_root.x - dir * 3.0, op_root.y + op_root.r_bot * 0.85, 1.2, 0.0),
+                    pt_node(
+                        (op_root.x + k_end.x) * 0.5,
+                        op_root.y + op_root.r_bot * 1.25 + 3.0 + aux_flap * 0.6,
+                        1.0,
+                        0.5,
+                    ),
+                    pt_node(k_end.x, k_end.y + k_end.r_bot * 0.75, 0.9, 1.0),
+                ],
+            });
+        }
+
+        let main_root = get_pt(0.38);
+        let wing_len = max_radius * 3.55 * fin_scale;
+        parts.push(AppendagePart {
+            z: 4,
+            kind: PartKind::MainWing,
+            pts: vec![
+                pt_node(main_root.x, main_root.y + main_root.r_bot * 0.22, max_radius * 0.42, 0.0),
+                pt_node(
+                    main_root.x - dir * wing_len * 0.36,
+                    main_root.y + wing_len * 0.28 + wing_flap * 0.35,
+                    max_radius * 0.36,
+                    0.33,
+                ),
+                pt_node(
+                    main_root.x - dir * wing_len * 0.72,
+                    main_root.y + wing_len * 0.54 + wing_flap * 0.75,
+                    max_radius * 0.24,
+                    0.66,
+                ),
+                pt_node(
+                    main_root.x - dir * wing_len * 1.02,
+                    main_root.y + wing_len * 0.72 + wing_flap * 1.15,
+                    1.1,
+                    1.0,
+                ),
+            ],
+        });
+
+        if bio.maturity > 0.22 {
+            let v_root = get_pt(0.45);
+            let v_len = max_radius * 1.85 * fin_scale * bio.maturity;
+            parts.push(AppendagePart {
+                z: -2,
+                kind: PartKind::AuxFlipper,
+                pts: vec![
+                    pt_node(v_root.x, v_root.y + v_root.r_bot * 0.75, max_radius * 0.30, 0.0),
+                    pt_node(
+                        v_root.x - dir * (v_len * 0.12 - aux_flap * 0.3),
+                        v_root.y + v_root.r_bot * 0.75 + v_len * 0.65,
+                        max_radius * 0.22,
+                        0.5,
+                    ),
+                    pt_node(
+                        v_root.x - dir * (v_len * 0.24 - aux_flap * 0.6),
+                        v_root.y + v_root.r_bot * 0.75 + v_len * 1.02,
+                        1.0,
+                        1.0,
+                    ),
+                ],
+            });
+        }
+
+        let pelv_root = get_pt(0.82);
+        let p_scale = max_radius * 1.10 * fin_scale;
+        parts.push(AppendagePart {
+            z: -1,
+            kind: PartKind::Fluke,
+            pts: vec![
+                pt_node(pelv_root.x, pelv_root.y + pelv_root.r_bot * 0.6, p_scale * 0.24, 0.0),
+                pt_node(
+                    pelv_root.x - dir * p_scale * 0.55,
+                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.45 + fluke_whip * 0.4,
+                    p_scale * 0.32,
+                    0.5,
+                ),
+                pt_node(
+                    pelv_root.x - dir * p_scale * 0.85,
+                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.62 + fluke_whip * 0.7,
+                    1.1,
+                    1.0,
+                ),
+            ],
+        });
+
+        let tail_root = get_pt(0.96);
+        let f_len = max_radius * 2.20 * fin_scale;
+        parts.push(AppendagePart {
+            z: -1,
+            kind: PartKind::Fluke,
+            pts: vec![
+                pt_node(tail_root.x, tail_root.y, tail_root.r * 0.9, 0.0),
+                pt_node(
+                    tail_root.x - dir * f_len * 0.55,
+                    tail_root.y - f_len * 0.14 + fluke_whip * 0.5,
+                    max_radius * 0.25,
+                    0.5,
+                ),
+                pt_node(
+                    tail_root.x - dir * f_len * 0.98,
+                    tail_root.y - f_len * 0.20 + fluke_whip,
+                    0.9,
+                    1.0,
+                ),
+            ],
+        });
+        parts.push(AppendagePart {
+            z: 2,
+            kind: PartKind::Fluke,
+            pts: vec![
+                pt_node(tail_root.x, tail_root.y + 1.0, tail_root.r * 0.95, 0.0),
+                pt_node(
+                    tail_root.x - dir * f_len * 0.50,
+                    tail_root.y + f_len * 0.16 + fluke_whip * 0.5,
+                    max_radius * 0.28,
+                    0.5,
+                ),
+                pt_node(
+                    tail_root.x - dir * f_len * 1.05,
+                    tail_root.y + f_len * 0.32 + fluke_whip,
+                    0.9,
+                    1.0,
+                ),
+            ],
+        });
+
+        if view == CameraView::Dive && bio.female_phase > 0.2 {
+            let snout = get_pt(0.03);
+            let s_len = max_radius * 1.65 * bio.female_phase;
+            parts.push(AppendagePart {
+                z: -2,
+                kind: PartKind::CrimsonScoop,
+                pts: vec![
+                    pt_node(snout.x - 4.0, snout.y, max_radius * 0.50, 0.0),
+                    pt_node(snout.x + s_len * 0.55, snout.y - s_len * 0.12, max_radius * 0.62, 0.5),
+                    pt_node(snout.x + s_len * 0.95, snout.y - s_len * 0.22, max_radius * 0.38, 1.0),
+                ],
+            });
+        }
+    }
+
+    (spine, parts)
+}
+
+/// Paint subtle, slowly drifting deep-ocean bioluminescent plankton motes around the whale.
+fn paint_deep_ocean_motes(
+    rgba_pixels: &mut [[u8; 4]],
+    w: u32,
+    h: u32,
+    loop_turn: f64,
+    coat: &TulkunCoat,
+) {
+    const MOTE_SEEDS: [(f64, f64, f64); 10] = [
+        (38.0, 22.0, 0.0),
+        (92.0, 18.0, 1.1),
+        (164.0, 14.0, 2.3),
+        (248.0, 24.0, 3.7),
+        (292.0, 48.0, 0.8),
+        (28.0, 78.0, 4.2),
+        (134.0, 108.0, 5.1),
+        (218.0, 114.0, 1.9),
+        (278.0, 102.0, 2.8),
+        (72.0, 96.0, 3.3),
+    ];
+
+    for (i, &(bx, by, phase_off)) in MOTE_SEEDS.iter().enumerate() {
+        let mx = (bx + (loop_turn + phase_off).cos() * 4.0).round() as i32;
+        let my = (by + (loop_turn + phase_off).sin() * 2.5).round() as i32;
+        if mx <= 2 || mx >= w as i32 - 3 || my <= 2 || my >= h as i32 - 24 {
+            continue;
+        }
+        let idx = (my as u32 * w + mx as u32) as usize;
+        if rgba_pixels[idx][3] == 0 {
+            let color = if i % 2 == 0 {
+                coat.belly[3]
+            } else {
+                coat.cream[2]
+            };
+            rgba_pixels[idx] = color;
+        }
+    }
+}
+
+/// Paint the bottom-left pixel-art HUD metrics:
+/// Line 1: `TULKEN` (with a glowing status dot)
+/// Line 2: `CONTRIBUTIONS: <count>`
+fn paint_metrics_hud(
+    rgba_pixels: &mut [[u8; 4]],
+    w: u32,
+    h: u32,
+    contributions: u64,
+    coat: &TulkunCoat,
+) {
+    let base_x = 8_u32;
+    let line1_y = h - 17;
+    let line2_y = h - 9;
+
+    // Glowing Language Indicator Pip beside "TULKEN"
+    let pip_color = coat.belly[3];
+    for dy in 0..5_u32 {
+        for dx in 0..3_u32 {
+            set_outlined_pixel(rgba_pixels, w, h, base_x + dx, line1_y + dy, pip_color);
+        }
+    }
+
+    let line1 = "WHALE: TULKEN";
+    draw_pixel_string(rgba_pixels, w, h, base_x + 6, line1_y, line1, coat.cream[3]);
+
+    let line2 = format!("CONTRIBUTIONS: {contributions}");
+    draw_pixel_string(rgba_pixels, w, h, base_x, line2_y, &line2, coat.belly[3]);
+}
+
+fn draw_pixel_string(
+    rgba_pixels: &mut [[u8; 4]],
+    w: u32,
+    h: u32,
+    start_x: u32,
+    start_y: u32,
+    text: &str,
+    color: [u8; 4],
+) {
+    let mut cursor_x = start_x;
+    for ch in text.chars() {
+        let glyph = glyph_3x5(ch);
+        for (row_idx, &row_bits) in glyph.iter().enumerate() {
+            for col_idx in 0..3_u32 {
+                if (row_bits >> (2 - col_idx)) & 1 == 1 {
+                    set_outlined_pixel(
+                        rgba_pixels,
+                        w,
+                        h,
+                        cursor_x + col_idx,
+                        start_y + row_idx as u32,
+                        color,
+                    );
+                }
+            }
+        }
+        cursor_x += 4;
+    }
+}
+
+fn set_outlined_pixel(
+    rgba_pixels: &mut [[u8; 4]],
+    w: u32,
+    h: u32,
+    px: u32,
+    py: u32,
+    color: [u8; 4],
+) {
+    if px == 0 || px >= w - 1 || py == 0 || py >= h - 1 {
+        return;
+    }
+    // 1px dark outline around text pixels so it reads crisply on both light and dark GitHub themes
+    for dy in -1_i32..=1 {
+        for dx in -1_i32..=1 {
+            if dx == 0 && dy == 0 {
+                continue;
+            }
+            let nx = (px as i32 + dx) as u32;
+            let ny = (py as i32 + dy) as u32;
+            let n_idx = (ny * w + nx) as usize;
+            if rgba_pixels[n_idx][3] == 0 {
+                rgba_pixels[n_idx] = OUTLINE_COLOR;
+            }
+        }
+    }
+    rgba_pixels[(py * w + px) as usize] = color;
+}
+
+/// Compact 3x5 pixel-art bitmap font for uppercase letters, digits, and punctuation.
+fn glyph_3x5(ch: char) -> [u8; 5] {
+    match ch.to_ascii_uppercase() {
+        'A' => [0b010, 0b101, 0b111, 0b101, 0b101],
+        'B' => [0b110, 0b101, 0b110, 0b101, 0b110],
+        'C' => [0b011, 0b100, 0b100, 0b100, 0b011],
+        'D' => [0b110, 0b101, 0b101, 0b101, 0b110],
+        'E' => [0b111, 0b100, 0b110, 0b100, 0b111],
+        'F' => [0b111, 0b100, 0b110, 0b100, 0b100],
+        'G' => [0b011, 0b100, 0b101, 0b101, 0b011],
+        'H' => [0b101, 0b101, 0b111, 0b101, 0b101],
+        'I' => [0b111, 0b010, 0b010, 0b010, 0b111],
+        'J' => [0b001, 0b001, 0b001, 0b101, 0b010],
+        'K' => [0b101, 0b101, 0b110, 0b101, 0b101],
+        'L' => [0b100, 0b100, 0b100, 0b100, 0b111],
+        'M' => [0b101, 0b111, 0b111, 0b101, 0b101],
+        'N' => [0b110, 0b101, 0b101, 0b101, 0b101],
+        'O' => [0b010, 0b101, 0b101, 0b101, 0b010],
+        'P' => [0b110, 0b101, 0b110, 0b100, 0b100],
+        'Q' => [0b010, 0b101, 0b101, 0b011, 0b001],
+        'R' => [0b110, 0b101, 0b110, 0b101, 0b101],
+        'S' => [0b011, 0b100, 0b010, 0b001, 0b110],
+        'T' => [0b111, 0b010, 0b010, 0b010, 0b010],
+        'U' => [0b101, 0b101, 0b101, 0b101, 0b111],
+        'V' => [0b101, 0b101, 0b101, 0b101, 0b010],
+        'W' => [0b101, 0b101, 0b111, 0b111, 0b101],
+        'X' => [0b101, 0b101, 0b010, 0b101, 0b101],
+        'Y' => [0b101, 0b101, 0b010, 0b010, 0b010],
+        'Z' => [0b111, 0b001, 0b010, 0b100, 0b111],
+        '0' => [0b111, 0b101, 0b101, 0b101, 0b111],
+        '1' => [0b010, 0b110, 0b010, 0b010, 0b111],
+        '2' => [0b111, 0b001, 0b111, 0b100, 0b111],
+        '3' => [0b111, 0b001, 0b011, 0b001, 0b111],
+        '4' => [0b101, 0b101, 0b111, 0b001, 0b001],
+        '5' => [0b111, 0b100, 0b111, 0b001, 0b111],
+        '6' => [0b111, 0b100, 0b111, 0b101, 0b111],
+        '7' => [0b111, 0b001, 0b001, 0b010, 0b010],
+        '8' => [0b111, 0b101, 0b111, 0b101, 0b111],
+        '9' => [0b111, 0b101, 0b111, 0b001, 0b111],
+        ':' => [0b000, 0b010, 0b000, 0b010, 0b000],
+        '-' => [0b000, 0b000, 0b111, 0b000, 0b000],
+        _ => [0b000, 0b000, 0b000, 0b000, 0b000],
+    }
 }
