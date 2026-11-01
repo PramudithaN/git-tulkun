@@ -14,7 +14,7 @@ pub const FRAME_HEIGHT_PIXELS: u32 = 140;
 /// Animation frame rate (15 FPS).
 pub const FRAMES_PER_SECOND: u32 = 15;
 /// Total frames in one seamless deep-ocean swimming loop (75 frames = 5.0 seconds per slow cycle).
-pub const LOOP_FRAME_COUNT: u32 = 75;
+pub const LOOP_FRAME_COUNT: u32 = 60;
 
 pub const OUTLINE_COLOR: [u8; 4] = [15, 18, 26, 255];
 
@@ -297,8 +297,8 @@ pub fn render_swim_frame(
     let ref_cy = (ref_min_y + ref_max_y) * 0.5;
 
     // Subtle, majestic deep-ocean glide drift (only 6px horizontal, 1.5px vertical)
-    let glide_x = loop_turn.sin() * 6.0;
-    let glide_y = loop_turn.cos() * 1.5;
+    let glide_x = loop_turn.sin() * 11.0;
+    let glide_y = loop_turn.cos() * 3.5;
     let target_cx = f64::from(w) * 0.52 + glide_x;
     let target_cy = (f64::from(h) - hud_reserved_bottom) * 0.48 + glide_y;
 
@@ -520,7 +520,7 @@ pub fn render_swim_frame(
     }
 
     // Paint subtle drifting deep-ocean bioluminescent plankton motes
-    paint_deep_ocean_motes(&mut rgba_pixels, w, h, loop_turn, coat);
+    // Removed background dots around creature as requested
 
     // Paint Bottom-Left Pixel-Art Metrics HUD: "NAME: TULKEN" & "CONTRIBUTIONS: <count>"
     paint_metrics_hud(&mut rgba_pixels, w, h, effective_commits, coat);
@@ -547,16 +547,16 @@ fn build_pose_geometry(
     let center_y = f64::from(h) * 0.44;
 
     // Realistic, slow, heavy cetacean physics (single 1x harmonic per 75-frame cycle, ~75% lower amplitude!)
-    let pitch_angle = loop_turn.cos() * 0.015;
-    let wave_amp = max_radius * 0.11; // Gentle tail peduncle stroke instead of violent whipping
+    let pitch_angle = loop_turn.cos() * 0.042;
+    let wave_amp = max_radius * 0.34;
 
     for i in 0..n_pts {
         let u = i as f64 / (n_pts - 1) as f64;
         let x = start_x - dir * (u * body_len);
 
         // Heavy head stays steady; smooth single-harmonic traveling wave glides down the tail stock
-        let head_bob = loop_turn.sin() * (max_radius * 0.035) * (1.0 - u);
-        let tail_stroke = (u * PI * 1.45 - loop_turn).sin() * wave_amp * u.powf(1.55);
+        let head_bob = loop_turn.sin() * (max_radius * 0.09) * (1.0 - u);
+        let tail_stroke = (u * PI * 1.85 - loop_turn).sin() * wave_amp * u.powf(1.25);
         let pitch_offset = (u - 0.35) * body_len * pitch_angle.sin();
 
         let mut y = center_y + head_bob + tail_stroke + pitch_offset;
@@ -621,9 +621,9 @@ fn build_pose_geometry(
     let mut parts = Vec::new();
     let fin_scale = bio.fin_stubbiness;
     // Slow, graceful deep-ocean fin sculling (1x loop_turn instead of 2x, gentle amplitude)
-    let wing_flap = (loop_turn - 0.6).sin() * (max_radius * 0.18);
-    let aux_flap = (loop_turn - 0.9).cos() * (max_radius * 0.10);
-    let fluke_whip = (loop_turn - 1.9).cos() * (max_radius * 0.16);
+    let wing_flap = (loop_turn - 0.65).sin() * (max_radius * 0.50);
+    let aux_flap = (loop_turn - 0.95).cos() * (max_radius * 0.26);
+    let fluke_whip = (loop_turn - 1.95).cos() * (max_radius * 0.44);
 
     if view == CameraView::Top {
         for side in [-1.0, 1.0] {
@@ -919,6 +919,7 @@ fn build_pose_geometry(
 }
 
 /// Paint subtle, slowly drifting deep-ocean bioluminescent plankton motes around the whale.
+#[allow(dead_code)]
 fn paint_deep_ocean_motes(
     rgba_pixels: &mut [[u8; 4]],
     w: u32,

@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Tulkun GIF & PNG
-        uses: PramudithaN/git-tulkun@v0.1.2
+        uses: PramudithaN/git-tulkun@v0.1.3
         with:
           login: ${{ github.repository_owner }}
           view: side        # Options: side | dive | top
