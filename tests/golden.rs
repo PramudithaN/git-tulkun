@@ -57,7 +57,7 @@ fn stage_boundaries_cover_zero_to_bull_log_scale() {
     assert_eq!(s3.hud_stage_label(), "STAGE 3: ADOLESCENT");
 
     let s4 = TulkunBiology::from_commits(1200);
-    assert_eq!(s4.hud_stage_label(), "STAGE 4: ADULT FEMALE");
+    assert_eq!(s4.hud_stage_label(), "STAGE 4: MATURE TULKUN");
 
     let s5 = TulkunBiology::from_commits(2500);
     assert_eq!(s5.hud_stage_label(), "STAGE 5: ADULT BULL");

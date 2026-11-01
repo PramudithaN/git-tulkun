@@ -222,13 +222,14 @@
       });
     }
 
-    function buildCoatFromColors(c1 = [49, 120, 198], c2 = [222, 165, 132], c3 = [53, 114, 165]) {
+    function buildCoatFromColors(c1 = [49, 120, 198], c2 = [222, 165, 132], c3 = [53, 114, 165], langs = null) {
       return {
         armor: makeRamp(c1, 0.16, 0.58),
         calfBlue: makeRamp(c1, 0.32, 1.25),
         cream: [[124, 132, 138], [172, 180, 186], [216, 222, 226], [248, 250, 252]],
         crestRed: makeRamp(c2, 0.35, 1.22),
-        tipGreen: makeRamp(c3, 0.45, 1.30)
+        tipGreen: makeRamp(c3, 0.45, 1.30),
+        languages: langs
       };
     }
 
@@ -272,7 +273,7 @@
 
     function getStageTitle(c) {
       if (c >= 2500) return "Stage 5: Adult Male Bull";
-      if (c >= 1200) return "Stage 4: Adult Female";
+      if (c >= 1200) return "Stage 4: Mature Tulkun";
       if (c >= 500) return "Stage 3: Adolescent Tulkun";
       if (c >= 150) return "Stage 2: Yearling Calf";
       return "Stage 1: Baby Tulkun Calf";
@@ -280,7 +281,7 @@
 
     function getHudStageLabel(c) {
       if (c >= 2500) return "STAGE 5: ADULT BULL";
-      if (c >= 1200) return "STAGE 4: ADULT FEMALE";
+      if (c >= 1200) return "STAGE 4: MATURE TULKUN";
       if (c >= 500) return "STAGE 3: ADOLESCENT";
       if (c >= 150) return "STAGE 2: YEARLING CALF";
       return "STAGE 1: BABY CALF";
@@ -563,8 +564,9 @@
       }
 
       // Crisp 3x5 Outlined Pixel-Art HUD in bottom-left corner (never blurry!)
-      const line1Y = H - 17;
-      const line2Y = H - 9;
+      const line1Y = H - 23;
+      const line2Y = H - 15;
+      const line3Y = H - 7;
       for (let dy = 0; dy < 5; dy++) {
         for (let dx = 0; dx < 3; dx++) {
           setOutlinedNativePixel(nativeBuf, W, H, 8 + dx, line1Y + dy, coat.calfBlue[3]);
@@ -572,6 +574,26 @@
       }
       drawNativePixelString(nativeBuf, W, H, 14, line1Y, getHudStageLabel(commits), coat.cream[3]);
       drawNativePixelString(nativeBuf, W, H, 8, line2Y, `CONTRIBUTIONS: ${commits}`, coat.calfBlue[3]);
+
+      // Line 3: Top 3 languages with matching pixel-color indicator dots
+      let langX = 8;
+      const langs = coat.languages || [
+        { name: "TypeScript", color: [49, 120, 198] },
+        { name: "Rust", color: [222, 165, 132] },
+        { name: "Python", color: [53, 114, 165] }
+      ];
+      for (const lang of langs.slice(0, 3)) {
+        const rgb = lang.color || [49, 120, 198];
+        for (let dy = 0; dy < 3; dy++) {
+          for (let dx = 0; dx < 3; dx++) {
+            setOutlinedNativePixel(nativeBuf, W, H, langX + dx, line3Y + 1 + dy, rgb);
+          }
+        }
+        langX += 5;
+        const shortName = lang.name.slice(0, 8);
+        drawNativePixelString(nativeBuf, W, H, langX, line3Y, shortName, coat.cream[2]);
+        langX += shortName.length * 4 + 6;
+      }
 
       // Integer 4x Nearest-Neighbor Upscale into 1280x560 Canvas ImageData
       const ctx = canvas.getContext('2d');
@@ -701,15 +723,24 @@ jobs:
           }
         }
 
+        const langList = [];
+        if (top && top.length > 0) {
+          for (const lName of top.slice(0, 3)) {
+            langList.push({ name: lName, color: LANG_COLORS[lName] || [49, 120, 198] });
+          }
+        } else {
+          langList.push({ name: "TypeScript", color: c1 }, { name: "Rust", color: c2 }, { name: "Python", color: c3 });
+        }
+
         if (isFriend) {
           friendUser = login;
           friendCommits = actualCommits;
-          friendCoat = buildCoatFromColors(c1, c2, c3);
+          friendCoat = buildCoatFromColors(c1, c2, c3, langList);
           document.getElementById("friendCaption").textContent = `@${friendUser} (${getStageTitle(friendCommits)} • ${friendCommits} contributions)`;
         } else {
           primaryUser = login;
           primaryCommits = actualCommits;
-          primaryCoat = buildCoatFromColors(c1, c2, c3);
+          primaryCoat = buildCoatFromColors(c1, c2, c3, langList);
           updateSnippets();
         }
       } catch (_) {
@@ -796,7 +827,7 @@ jobs:
       sctx.drawImage(document.getElementById("mainCanvas"), 0, 72, 1280, 560);
 
       // Bottom-right stage progression indicator
-      const stages = ["1. Calf", "2. Yearling", "3. Adolescent", "4. Female", "5. Bull"];
+      const stages = ["1. Calf", "2. Yearling", "3. Adolescent", "4. Mature", "5. Bull"];
       const activeIdx = primaryCommits >= 2500 ? 4 : primaryCommits >= 1200 ? 3 : primaryCommits >= 500 ? 2 : primaryCommits >= 150 ? 1 : 0;
       let sx = 640;
       sctx.font = "bold 17px monospace";

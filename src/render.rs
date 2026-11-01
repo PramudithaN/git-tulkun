@@ -93,7 +93,7 @@ impl TulkunBiology {
         if self.commits >= 2500 {
             "Adult Male Bull (Hooked Hammer-Crest)"
         } else if self.commits >= 1200 {
-            "Adult Female (Sloped Sensor Crest)"
+            "Mature Tulkun (Sloped Sensor Crest)"
         } else if self.commits >= 500 {
             "Adolescent Tulkun"
         } else if self.commits >= 150 {
@@ -107,7 +107,7 @@ impl TulkunBiology {
         if self.commits >= 2500 {
             "STAGE 5: ADULT BULL"
         } else if self.commits >= 1200 {
-            "STAGE 4: ADULT FEMALE"
+            "STAGE 4: MATURE TULKUN"
         } else if self.commits >= 500 {
             "STAGE 3: ADOLESCENT"
         } else if self.commits >= 150 {
@@ -554,8 +554,8 @@ pub fn render_swim_frame(
     // Paint subtle drifting deep-ocean bioluminescent plankton motes
     // Removed background dots around creature as requested
 
-    // Paint Bottom-Left Pixel-Art Metrics HUD: Stage Label & Contributions
-    paint_metrics_hud(&mut rgba_pixels, w, h, &bio, coat);
+    // Paint Bottom-Left Pixel-Art Metrics HUD: Stage Label, Contributions & Top Languages
+    paint_metrics_hud(&mut rgba_pixels, w, h, &bio, coat, snapshot);
 
     let _ = n_pts;
     TulkunFrame { rgba_pixels }
@@ -1046,18 +1046,21 @@ fn paint_deep_ocean_motes(
 }
 
 /// Paint the bottom-left pixel-art HUD metrics:
-/// Line 1: `<STAGE>` (e.g., `STAGE 4: ADULT FEMALE`, with a glowing language pip)
+/// Line 1: `<STAGE>` (e.g., `STAGE 4: MATURE TULKUN`, with a glowing language pip)
 /// Line 2: `CONTRIBUTIONS: <count>`
+/// Line 3: Top 3 languages with corresponding pixel-color indicator pips
 fn paint_metrics_hud(
     rgba_pixels: &mut [[u8; 4]],
     w: u32,
     h: u32,
     bio: &TulkunBiology,
     coat: &TulkunCoat,
+    snapshot: &AccountSnapshot,
 ) {
     let base_x = 8_u32;
-    let line1_y = h - 17;
-    let line2_y = h - 9;
+    let line1_y = h - 23;
+    let line2_y = h - 15;
+    let line3_y = h - 7;
 
     let pip_color = coat.belly[3];
     for dy in 0..5_u32 {
@@ -1071,6 +1074,23 @@ fn paint_metrics_hud(
 
     let line2 = format!("CONTRIBUTIONS: {}", bio.commits);
     draw_pixel_string(rgba_pixels, w, h, base_x, line2_y, &line2, coat.belly[3]);
+
+    // Line 3: Top 3 languages with their respective pixel color dots
+    let mut lang_x = base_x;
+    for lang in snapshot.languages.iter().take(3) {
+        if let Some(rgb) = crate::coat::parse_hex_color(&lang.hex_color) {
+            let col = [rgb[0], rgb[1], rgb[2], 255];
+            for dy in 0..3_u32 {
+                for dx in 0..3_u32 {
+                    set_outlined_pixel(rgba_pixels, w, h, lang_x + dx, line3_y + 1 + dy, col);
+                }
+            }
+        }
+        lang_x += 5;
+        let short_name = lang.name.chars().take(8).collect::<String>();
+        draw_pixel_string(rgba_pixels, w, h, lang_x, line3_y, &short_name, coat.cream[2]);
+        lang_x += (short_name.len() as u32) * 4 + 6;
+    }
 }
 
 /// Native dimensions for the 1280x640 (4x scaled) shareable evolution & social preview card.
@@ -1136,7 +1156,7 @@ pub fn render_share_card_frame(
     }
 
     // Bottom-right 5-stage evolution progress pills
-    let stages = ["1.CALF", "2.YRLG", "3.ADOL", "4.FEM", "5.BULL"];
+    let stages = ["1.CALF", "2.YRLG", "3.ADOL", "4.MATR", "5.BULL"];
     let active_idx = if bio.commits >= 2500 {
         4
     } else if bio.commits >= 1200 {
