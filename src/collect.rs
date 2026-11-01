@@ -10,10 +10,10 @@ use std::io::ErrorKind;
 use std::process::Command;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::history::{
-    AccountSnapshot, ContributionDay, ContributionWindow, rank_languages, summarize_calendar_window,
+    rank_languages, summarize_calendar_window, AccountSnapshot, ContributionDay, ContributionWindow,
 };
 
 const ACCOUNT_QUERY: &str = r#"
@@ -121,10 +121,7 @@ fn parse_graphql_snapshot(
         .filter(|u| !u.is_null())
         .ok_or_else(|| format!("GitHub user `{login}` not found"))?;
 
-    let account_id = user
-        .get("databaseId")
-        .and_then(Value::as_u64)
-        .unwrap_or(1);
+    let account_id = user.get("databaseId").and_then(Value::as_u64).unwrap_or(1);
 
     let mut lang_counts: BTreeMap<String, (String, u32)> = BTreeMap::new();
     if let Some(nodes) = user
@@ -221,7 +218,9 @@ fn fetch_public_rest_snapshot(
                 }
                 if let Some(lang_name) = repo.get("language").and_then(Value::as_str) {
                     let color = default_language_hex(lang_name).to_owned();
-                    let entry = lang_counts.entry(lang_name.to_owned()).or_insert((color, 0));
+                    let entry = lang_counts
+                        .entry(lang_name.to_owned())
+                        .or_insert((color, 0));
                     entry.1 += 1;
                 }
             }

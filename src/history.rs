@@ -1,8 +1,8 @@
 //! Account snapshot and language share models.
 
-use std::collections::BTreeMap;
 use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// Window mode used to sum contributions for Tulkun stage progression.
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
@@ -62,7 +62,10 @@ impl AccountSnapshot {
 }
 
 /// Summarize daily contributions in the current calendar year into total, current month, current streak, and longest streak.
-pub fn summarize_calendar(days: &[ContributionDay], observed_on: NaiveDate) -> (u64, u64, u32, u32) {
+pub fn summarize_calendar(
+    days: &[ContributionDay],
+    observed_on: NaiveDate,
+) -> (u64, u64, u32, u32) {
     summarize_calendar_window(days, observed_on, ContributionWindow::Annual)
 }
 
@@ -92,7 +95,8 @@ pub fn summarize_calendar_window(
         if in_window {
             total += u64::from(day.count);
         }
-        if day.date.year_ce() == observed_on.year_ce() && day.date.month0() == observed_on.month0() {
+        if day.date.year_ce() == observed_on.year_ce() && day.date.month0() == observed_on.month0()
+        {
             monthly += u64::from(day.count);
         }
         if day.count > 0 {
@@ -116,6 +120,10 @@ pub fn rank_languages(raw_counts: BTreeMap<String, (String, u32)>) -> Vec<Langua
             repo_count,
         })
         .collect();
-    list.sort_by(|a, b| b.repo_count.cmp(&a.repo_count).then_with(|| a.name.cmp(&b.name)));
+    list.sort_by(|a, b| {
+        b.repo_count
+            .cmp(&a.repo_count)
+            .then_with(|| a.name.cmp(&b.name))
+    });
     list
 }

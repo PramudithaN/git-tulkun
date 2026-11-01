@@ -16,8 +16,8 @@ use git_tulkun::collect::collect_account_snapshot_with_window;
 use git_tulkun::history::{AccountSnapshot, ContributionWindow, LanguageShare};
 use git_tulkun::output::{encode_gif, encode_png, encode_preview_html, encode_share_card_png};
 use git_tulkun::render::{
-    CameraView, LOOP_FRAME_COUNT, TulkunBiology, TulkunFrame, render_share_card_frame,
-    render_still_frame, render_swim_frame,
+    render_share_card_frame, render_still_frame, render_swim_frame, CameraView, TulkunBiology,
+    TulkunFrame, LOOP_FRAME_COUNT,
 };
 
 fn main() -> ExitCode {
@@ -99,8 +99,8 @@ fn run_cli(args: &[String]) -> Result<(), String> {
                 }
             }
 
-            let raw = fs::read_to_string(snapshot_file)
-                .map_err(|e| format!("{snapshot_file}: {e}"))?;
+            let raw =
+                fs::read_to_string(snapshot_file).map_err(|e| format!("{snapshot_file}: {e}"))?;
             let snapshot: AccountSnapshot =
                 serde_json::from_str(&raw).map_err(|e| format!("{snapshot_file}: {e}"))?;
             render_to_directory(&snapshot, &output_dir, view, canon_only)
@@ -174,7 +174,9 @@ fn parse_view(s: &str) -> Result<CameraView, String> {
         "side" => Ok(CameraView::Side),
         "dive" => Ok(CameraView::Dive),
         "top" => Ok(CameraView::Top),
-        _ => Err(format!("unknown view `{s}` (expected `side`, `dive`, or `top`)")),
+        _ => Err(format!(
+            "unknown view `{s}` (expected `side`, `dive`, or `top`)"
+        )),
     }
 }
 

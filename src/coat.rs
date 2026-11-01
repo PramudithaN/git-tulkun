@@ -77,9 +77,15 @@ pub fn build_ramp_from_rgb([r, g, b]: [u8; 3], darken_bias: f64) -> ShadeRamp {
         (1.18 * darken_bias).min(1.35),
     ];
     scales.map(|s| {
-        let nr = (f64::from(r) * s + (s - 0.5).max(0.0) * 35.0).round().clamp(14.0, 255.0) as u8;
-        let ng = (f64::from(g) * s + (s - 0.5).max(0.0) * 35.0).round().clamp(14.0, 255.0) as u8;
-        let nb = (f64::from(b) * s + (s - 0.5).max(0.0) * 35.0).round().clamp(18.0, 255.0) as u8;
+        let nr = (f64::from(r) * s + (s - 0.5).max(0.0) * 35.0)
+            .round()
+            .clamp(14.0, 255.0) as u8;
+        let ng = (f64::from(g) * s + (s - 0.5).max(0.0) * 35.0)
+            .round()
+            .clamp(14.0, 255.0) as u8;
+        let nb = (f64::from(b) * s + (s - 0.5).max(0.0) * 35.0)
+            .round()
+            .clamp(18.0, 255.0) as u8;
         [nr, ng, nb, 255]
     })
 }

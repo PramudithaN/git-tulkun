@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::render::{
-    FRAMES_PER_SECOND, FRAME_HEIGHT_PIXELS, FRAME_WIDTH_PIXELS, SHARE_CARD_HEIGHT_PIXELS,
-    SHARE_CARD_WIDTH_PIXELS, TulkunFrame,
+    TulkunFrame, FRAMES_PER_SECOND, FRAME_HEIGHT_PIXELS, FRAME_WIDTH_PIXELS,
+    SHARE_CARD_HEIGHT_PIXELS, SHARE_CARD_WIDTH_PIXELS,
 };
 
 /// Each native pixel becomes `2x2` exported pixels so the pixel art stays razor-sharp.
@@ -112,9 +112,8 @@ pub fn encode_gif(frames: &[TulkunFrame]) -> Result<Vec<u8>, String> {
                 }
             }
 
-            let mut export_indices = Vec::with_capacity(
-                native_indices.len() * (EXPORT_SCALE * EXPORT_SCALE) as usize,
-            );
+            let mut export_indices =
+                Vec::with_capacity(native_indices.len() * (EXPORT_SCALE * EXPORT_SCALE) as usize);
             for native_row in native_indices.chunks(box_width as usize) {
                 let mut export_row = Vec::with_capacity((box_width * EXPORT_SCALE) as usize);
                 for &idx in native_row {

@@ -1,11 +1,11 @@
 use chrono::NaiveDate;
-use git_tulkun::coat::{TulkunCoat, parse_hex_color};
+use git_tulkun::coat::{parse_hex_color, TulkunCoat};
 use git_tulkun::history::{
-    AccountSnapshot, ContributionDay, ContributionWindow, LanguageShare, summarize_calendar_window,
+    summarize_calendar_window, AccountSnapshot, ContributionDay, ContributionWindow, LanguageShare,
 };
 use git_tulkun::output::{encode_gif, encode_png, encode_share_card_png};
 use git_tulkun::render::{
-    CameraView, TulkunBiology, render_share_card_frame, render_still_frame, render_swim_frame,
+    render_share_card_frame, render_still_frame, render_swim_frame, CameraView, TulkunBiology,
 };
 
 fn fnv1a_64(bytes: &[u8]) -> u64 {

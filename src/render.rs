@@ -18,12 +18,7 @@ pub const LOOP_FRAME_COUNT: u32 = 48;
 
 pub const OUTLINE_COLOR: [u8; 4] = [15, 18, 26, 255];
 
-const BAYER_4X4: [[u8; 4]; 4] = [
-    [0, 8, 2, 10],
-    [12, 4, 14, 6],
-    [3, 11, 1, 9],
-    [15, 7, 13, 5],
-];
+const BAYER_4X4: [[u8; 4]; 4] = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 
 /// Camera perspective for rendering the Tulkun.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -272,7 +267,9 @@ pub fn render_swim_frame(
     let h = FRAME_HEIGHT_PIXELS;
     let mut rgba_pixels = vec![[0_u8; 4]; (w * h) as usize];
 
-    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions);
+    let effective_commits = snapshot
+        .total_contributions
+        .max(snapshot.monthly_contributions);
     let bio = TulkunBiology::from_commits(effective_commits);
 
     // Seamless slow 5-second period phase in [0, TAU)
@@ -288,7 +285,23 @@ pub fn render_swim_frame(
     let mut ref_min_y = f64::INFINITY;
     let mut ref_max_x = f64::NEG_INFINITY;
     let mut ref_max_y = f64::NEG_INFINITY;
-    for step in 0..8 { let (s_spine, s_parts) = build_pose_geometry(&bio, view, TAU * (step as f64 / 8.0), w, h); for p in &s_spine { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0); ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0); } for part in &s_parts { for p in &part.pts { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r - 4.0); ref_max_y = ref_max_y.max(p.y + p.r + 4.0); } } }
+    for step in 0..8 {
+        let (s_spine, s_parts) = build_pose_geometry(&bio, view, TAU * (step as f64 / 8.0), w, h);
+        for p in &s_spine {
+            ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
+            ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
+            ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0);
+            ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0);
+        }
+        for part in &s_parts {
+            for p in &part.pts {
+                ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
+                ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
+                ref_min_y = ref_min_y.min(p.y - p.r - 4.0);
+                ref_max_y = ref_max_y.max(p.y + p.r + 4.0);
+            }
+        }
+    }
 
     for p in &rest_spine {
         ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
@@ -652,7 +665,12 @@ fn build_pose_geometry(
                 z: 2,
                 kind: PartKind::Opercular,
                 pts: vec![
-                    pt_node(op_root.x, op_root.y + side * op_root.r * 0.75, max_radius * 0.26, 0.0),
+                    pt_node(
+                        op_root.x,
+                        op_root.y + side * op_root.r * 0.75,
+                        max_radius * 0.26,
+                        0.0,
+                    ),
                     pt_node(
                         op_root.x - dir * (op_len * 0.45 + aux_flap * 0.3),
                         op_root.y + side * (op_root.r * 0.75 + op_len * 0.85),
@@ -674,7 +692,12 @@ fn build_pose_geometry(
                 z: 3,
                 kind: PartKind::MainWing,
                 pts: vec![
-                    pt_node(main_root.x, main_root.y + side * main_root.r * 0.75, max_radius * 0.42, 0.0),
+                    pt_node(
+                        main_root.x,
+                        main_root.y + side * main_root.r * 0.75,
+                        max_radius * 0.42,
+                        0.0,
+                    ),
                     pt_node(
                         main_root.x - dir * (main_len * 0.28 + wing_flap * 0.3),
                         main_root.y + side * (main_root.r + main_len * 0.52),
@@ -702,7 +725,12 @@ fn build_pose_geometry(
                     z: 1,
                     kind: PartKind::Kuru,
                     pts: vec![
-                        pt_node(op_root.x - dir * 4.0, op_root.y + side * op_root.r * 0.9, 1.2, 0.0),
+                        pt_node(
+                            op_root.x - dir * 4.0,
+                            op_root.y + side * op_root.r * 0.9,
+                            1.2,
+                            0.0,
+                        ),
                         pt_node(
                             op_root.x - dir * k_len * 0.6,
                             op_root.y + side * (op_root.r * 1.15 + k_len * 0.22 + aux_flap * 0.4),
@@ -725,7 +753,12 @@ fn build_pose_geometry(
                 z: 2,
                 kind: PartKind::Fluke,
                 pts: vec![
-                    pt_node(pelv_root.x, pelv_root.y + side * pelv_root.r * 0.6, max_radius * 0.22, 0.0),
+                    pt_node(
+                        pelv_root.x,
+                        pelv_root.y + side * pelv_root.r * 0.6,
+                        max_radius * 0.22,
+                        0.0,
+                    ),
                     pt_node(
                         pelv_root.x - dir * p_len * 0.65,
                         pelv_root.y + side * (pelv_root.r + p_len * 0.75),
@@ -770,7 +803,12 @@ fn build_pose_geometry(
             z: 3,
             kind: PartKind::Opercular,
             pts: vec![
-                pt_node(op_root.x, op_root.y + op_root.r_bot * 0.35, max_radius * 0.28, 0.0),
+                pt_node(
+                    op_root.x,
+                    op_root.y + op_root.r_bot * 0.35,
+                    max_radius * 0.28,
+                    0.0,
+                ),
                 pt_node(
                     op_root.x - dir * op_len * 0.35,
                     op_root.y + op_root.r_bot * 0.35 + op_len * 0.65 + aux_flap * 0.5,
@@ -792,7 +830,12 @@ fn build_pose_geometry(
                 z: 2,
                 kind: PartKind::Kuru,
                 pts: vec![
-                    pt_node(op_root.x - dir * 3.0, op_root.y + op_root.r_bot * 0.85, 1.2, 0.0),
+                    pt_node(
+                        op_root.x - dir * 3.0,
+                        op_root.y + op_root.r_bot * 0.85,
+                        1.2,
+                        0.0,
+                    ),
                     pt_node(
                         (op_root.x + k_end.x) * 0.5,
                         op_root.y + op_root.r_bot * 1.25 + 3.0 + aux_flap * 0.6,
@@ -810,7 +853,12 @@ fn build_pose_geometry(
             z: 4,
             kind: PartKind::MainWing,
             pts: vec![
-                pt_node(main_root.x, main_root.y + main_root.r_bot * 0.22, max_radius * 0.42, 0.0),
+                pt_node(
+                    main_root.x,
+                    main_root.y + main_root.r_bot * 0.22,
+                    max_radius * 0.42,
+                    0.0,
+                ),
                 pt_node(
                     main_root.x - dir * wing_len * 0.36,
                     main_root.y + wing_len * 0.28 + wing_flap * 0.35,
@@ -839,7 +887,12 @@ fn build_pose_geometry(
                 z: -2,
                 kind: PartKind::AuxFlipper,
                 pts: vec![
-                    pt_node(v_root.x, v_root.y + v_root.r_bot * 0.75, max_radius * 0.30, 0.0),
+                    pt_node(
+                        v_root.x,
+                        v_root.y + v_root.r_bot * 0.75,
+                        max_radius * 0.30,
+                        0.0,
+                    ),
                     pt_node(
                         v_root.x - dir * (v_len * 0.12 - aux_flap * 0.3),
                         v_root.y + v_root.r_bot * 0.75 + v_len * 0.65,
@@ -862,7 +915,12 @@ fn build_pose_geometry(
             z: -1,
             kind: PartKind::Fluke,
             pts: vec![
-                pt_node(pelv_root.x, pelv_root.y + pelv_root.r_bot * 0.6, p_scale * 0.24, 0.0),
+                pt_node(
+                    pelv_root.x,
+                    pelv_root.y + pelv_root.r_bot * 0.6,
+                    p_scale * 0.24,
+                    0.0,
+                ),
                 pt_node(
                     pelv_root.x - dir * p_scale * 0.55,
                     pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.45 + fluke_whip * 0.4,
@@ -927,8 +985,18 @@ fn build_pose_geometry(
                 kind: PartKind::CrimsonScoop,
                 pts: vec![
                     pt_node(snout.x - 4.0, snout.y, max_radius * 0.50, 0.0),
-                    pt_node(snout.x + s_len * 0.55, snout.y - s_len * 0.12, max_radius * 0.62, 0.5),
-                    pt_node(snout.x + s_len * 0.95, snout.y - s_len * 0.22, max_radius * 0.38, 1.0),
+                    pt_node(
+                        snout.x + s_len * 0.55,
+                        snout.y - s_len * 0.12,
+                        max_radius * 0.62,
+                        0.5,
+                    ),
+                    pt_node(
+                        snout.x + s_len * 0.95,
+                        snout.y - s_len * 0.22,
+                        max_radius * 0.38,
+                        1.0,
+                    ),
                 ],
             });
         }
@@ -1042,7 +1110,9 @@ pub fn render_share_card_frame(
         pixels[(18 * w + x) as usize] = border_col;
     }
 
-    let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions);
+    let effective_commits = snapshot
+        .total_contributions
+        .max(snapshot.monthly_contributions);
     let bio = TulkunBiology::from_commits(effective_commits);
 
     draw_pixel_string(&mut pixels, w, h, 9, 9, "GIT-TULKUN", coat.cream[3]);
