@@ -1,7 +1,5 @@
 name: git-profile-tulkun
-description:
-  Draw a GitHub account's procedural pixel-art Tulkun whale from its commits and
-  language colors as a looping GIF, a still PNG, and a preview, for a profile README.
+description: Generate a procedural pixel-art Tulkun whale GIF from your GitHub contributions and language colors.
 branding:
   icon: anchor
   color: blue
