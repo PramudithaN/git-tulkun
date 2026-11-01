@@ -3,115 +3,214 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GitTulkun — Interactive GitHub README Whale Generator & Comparator</title>
+  <title>GitTulkun | Interactive GitHub README Whale Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-    canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
-    .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+    body {
+      background: #090d16;
+      background-image: radial-gradient(circle at 50% 0%, #132038 0%, #090d16 70%);
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    }
+    .card {
+      background: rgba(22, 27, 34, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid #30363d;
+      border-radius: 14px;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
   <div class="max-w-5xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#30363d] pb-4">
+    <!-- Top Header -->
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[#30363d] pb-5">
       <div>
-        <h1 class="text-xl font-bold tracking-tight text-white">GitTulkun — Instant GitHub README Generator</h1>
-        <p class="text-sm text-[#8b949e]">Type your GitHub username to preview your procedural pixel-art Tulkun, compare with a friend, or copy the 1-step setup.</p>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-2xl font-bold tracking-tight text-white">GitTulkun</h1>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40">v1.0</span>
+        </div>
+        <p class="text-sm text-[#8b949e] mt-1">
+          Enter your GitHub username to preview your procedural pixel-art Tulkun, compare with a friend, or copy the setup snippets.
+        </p>
       </div>
-      <div class="flex items-center gap-2">
-        <a href="https://github.com/PramudithaN/git-tulkun" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] transition">
-          Star on GitHub
+      <div class="flex items-center gap-2.5">
+        <a href="https://github.com/PramudithaN/git-tulkun" target="_blank" rel="noopener" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition">
+          View on GitHub
         </a>
-        <button id="downloadShareBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#238636] text-white hover:bg-[#2ea043] transition">
-          Download 1280×640 Share Card
+        <button id="downloadShareBtn" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#238636] text-white hover:bg-[#2ea043] transition shadow-sm">
+          Download 1280x640 Share Card
         </button>
       </div>
-    </div>
+    </header>
 
-    <!-- Generator Controls -->
-    <div class="card p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <!-- Controls Bar (3 Clean Columns, No Camera Perspective Selector) -->
+    <section class="card p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
-        <label class="text-xs font-semibold text-[#8b949e] block mb-1">GitHub Username</label>
-        <div class="flex gap-1.5">
-          <input id="userInput" type="text" value="PramudithaN" placeholder="e.g. PramudithaN" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white" />
-          <button id="fetchUserBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:opacity-90">Load</button>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1.5">GitHub Username</label>
+        <div class="flex gap-2">
+          <input id="userInput" type="text" value="PramudithaN" placeholder="e.g. PramudithaN" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
+          <button id="fetchUserBtn" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:bg-[#388bfd] transition">Load</button>
         </div>
       </div>
-      <div>
-        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Current-Year Contributions: <span id="commitReadout" class="text-white">140</span></label>
-        <input id="commitSlider" type="range" min="1" max="150" value="140" class="w-full accent-[#1f6feb] mt-1.5" />
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Camera Perspective</label>
-        <select id="viewSelect" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white">
-          <option value="side">side — Lateral Side Swim</option>
-          <option value="dive">dive — 3/4 Dynamic Dive</option>
-          <option value="top">top — Dorsal Top-Down</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-xs font-semibold text-[#8b949e] block mb-1">Compare With a Friend (Optional)</label>
-        <div class="flex gap-1.5">
-          <input id="friendInput" type="text" placeholder="Friend's GitHub login" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-2.5 py-1.5 text-xs text-white" />
-          <button id="compareBtn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Compare</button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Live Canvas Preview (Single or Side-by-Side Comparison) -->
-    <div id="canvasGrid" class="grid grid-cols-1 gap-4">
-      <div class="card p-4 space-y-2">
-        <div class="flex items-center justify-between text-xs text-[#8b949e]">
-          <span id="primaryCaption" class="font-mono text-white">@PramudithaN — Stage 5: Adult Male Bull</span>
-          <span>Resets every Jan 1st • 15 FPS Pixel-Art Buffer</span>
+      <div>
+        <div class="flex items-center justify-between text-xs font-semibold mb-1.5">
+          <span class="text-[#8b949e]">Annual Contributions: <strong id="commitReadout" class="text-white">140</strong></span>
+          <span id="stageBadge" class="text-[#58a6ff]">Stage 5: Adult Male Bull</span>
         </div>
-        <div class="rounded-lg bg-[#0d1117] border border-[#30363d] p-3 flex justify-center">
-          <canvas id="mainCanvas" width="320" height="140" class="w-full max-w-[680px] h-auto"></canvas>
-        </div>
-      </div>
-      <div id="friendCard" class="card p-4 space-y-2 hidden">
-        <div class="flex items-center justify-between text-xs text-[#8b949e]">
-          <span id="friendCaption" class="font-mono text-white">@friend — Stage 3: Adolescent Tulkun</span>
-          <span>Side-by-Side Comparison</span>
-        </div>
-        <div class="rounded-lg bg-[#0d1117] border border-[#30363d] p-3 flex justify-center">
-          <canvas id="friendCanvas" width="320" height="140" class="w-full max-w-[680px] h-auto"></canvas>
+        <input id="commitSlider" type="range" min="1" max="150" value="140" class="w-full accent-[#1f6feb] cursor-pointer mt-1" />
+        <div class="flex justify-between text-[11px] text-[#8b949e] mt-0.5">
+          <span>1 (Calf)</span>
+          <span>25 (Yearling)</span>
+          <span>55 (Adolescent)</span>
+          <span>90 (Female)</span>
+          <span>115+ (Bull)</span>
         </div>
       </div>
-    </div>
+
+      <div>
+        <label class="text-xs font-semibold text-[#8b949e] block mb-1.5">Compare With a Friend (Optional)</label>
+        <div class="flex gap-2">
+          <input id="friendInput" type="text" placeholder="Friend's GitHub username" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
+          <button id="compareBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition">Compare</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- High-Resolution 1280x560 Live Canvas Preview -->
+    <section id="canvasGrid" class="grid grid-cols-1 gap-4">
+      <div class="card p-5 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-[#3fb950]"></span>
+            <span id="primaryCaption" class="font-semibold text-white text-sm">@PramudithaN (Stage 5: Adult Male Bull)</span>
+          </div>
+          <span class="text-[#8b949e] font-mono">1280x560 High-Resolution 4x Pixel Art • Resets Jan 1st</span>
+        </div>
+        <div class="rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center">
+          <canvas id="mainCanvas" width="1280" height="560" class="w-full max-w-[820px] h-auto"></canvas>
+        </div>
+      </div>
+
+      <div id="friendCard" class="card p-5 space-y-3 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-[#58a6ff]"></span>
+            <span id="friendCaption" class="font-semibold text-white text-sm">@friend (Stage 3: Adolescent Tulkun)</span>
+          </div>
+          <button id="closeCompareBtn" class="text-[#8b949e] hover:text-white">Close Comparison</button>
+        </div>
+        <div class="rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center">
+          <canvas id="friendCanvas" width="1280" height="560" class="w-full max-w-[820px] h-auto"></canvas>
+        </div>
+      </div>
+    </section>
 
     <!-- One-Click Copy Setup Snippets -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="card p-4 space-y-2">
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-2.5">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">1. Paste into <code class="text-white">.github/workflows/tulkun.yml</code></h2>
-          <button id="copyYamlBtn" class="px-2.5 py-1 rounded text-xs bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Copy YAML</button>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">Step 1: Add to <code class="text-white">README.md</code></h2>
+          <button id="copyMdBtn" class="px-2.5 py-1 rounded-md text-xs font-medium bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition">Copy Markdown</button>
         </div>
-        <pre id="yamlCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3 overflow-x-auto text-[#c9d1d9]"></pre>
+        <pre id="mdCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3.5 overflow-x-auto text-[#c9d1d9] leading-relaxed"></pre>
+        <p class="text-xs text-[#8b949e]">
+          Includes a clickable link back to the repository so visitors can discover how your whale was generated.
+        </p>
       </div>
-      <div class="card p-4 space-y-2">
+
+      <div class="card p-4 space-y-2.5">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">2. Paste into your <code class="text-white">README.md</code></h2>
-          <button id="copyMdBtn" class="px-2.5 py-1 rounded text-xs bg-[#21262d] border border-[#30363d] hover:bg-[#30363d]">Copy Markdown</button>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#8b949e]">Step 2: Create <code class="text-white">.github/workflows/tulkun.yml</code></h2>
+          <button id="copyYamlBtn" class="px-2.5 py-1 rounded-md text-xs font-medium bg-[#21262d] border border-[#30363d] text-white hover:bg-[#30363d] transition">Copy Workflow YAML</button>
         </div>
-        <pre id="mdCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3 overflow-x-auto text-[#c9d1d9]"></pre>
-        <p class="text-xs text-[#8b949e]">After committing both files, go to <strong>Actions → Update Tulkun → Run workflow</strong> to render your first GIF.</p>
+        <pre id="yamlCode" class="text-xs font-mono bg-[#0d1117] border border-[#30363d] rounded-lg p-3.5 overflow-x-auto text-[#c9d1d9] leading-relaxed"></pre>
       </div>
-    </div>
+    </section>
 
     <footer class="text-center text-xs text-[#8b949e] pt-4 border-t border-[#30363d]">
-      Unofficial fan-made open-source project. <em>Tulkun</em> and <em>Avatar: The Way of Water</em> are trademarks of 20th Century Studios / Lightstorm Entertainment.
+      Unofficial fan-made open-source project. <em>Tulkun</em> and <em>Avatar: The Way of Water</em> are trademarks of 20th Century Studios and Lightstorm Entertainment.
     </footer>
   </div>
 
   <script>
-    const BAYER_4X4 = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+    const NATIVE_W = 320;
+    const NATIVE_H = 140;
+    const SCALE = 4; // 320x140 * 4 = 1280x560 razor-sharp nearest-neighbor canvas
+
+    const BAYER_4X4 = [
+      [0, 8, 2, 10],
+      [12, 4, 14, 6],
+      [3, 11, 1, 9],
+      [15, 7, 13, 5]
+    ];
     const OUTLINE_COLOR = [15, 18, 26, 255];
+
+    const GLYPHS_3X5 = {
+      'A': [0b010, 0b101, 0b111, 0b101, 0b101],
+      'B': [0b110, 0b101, 0b110, 0b101, 0b110],
+      'C': [0b011, 0b100, 0b100, 0b100, 0b011],
+      'D': [0b110, 0b101, 0b101, 0b101, 0b110],
+      'E': [0b111, 0b100, 0b110, 0b100, 0b111],
+      'F': [0b111, 0b100, 0b110, 0b100, 0b100],
+      'G': [0b011, 0b100, 0b101, 0b101, 0b011],
+      'H': [0b101, 0b101, 0b111, 0b101, 0b101],
+      'I': [0b111, 0b010, 0b010, 0b010, 0b111],
+      'J': [0b001, 0b001, 0b001, 0b101, 0b010],
+      'K': [0b101, 0b101, 0b110, 0b101, 0b101],
+      'L': [0b100, 0b100, 0b100, 0b100, 0b111],
+      'M': [0b101, 0b111, 0b111, 0b101, 0b101],
+      'N': [0b110, 0b101, 0b101, 0b101, 0b101],
+      'O': [0b010, 0b101, 0b101, 0b101, 0b010],
+      'P': [0b110, 0b101, 0b110, 0b100, 0b100],
+      'Q': [0b010, 0b101, 0b101, 0b011, 0b001],
+      'R': [0b110, 0b101, 0b110, 0b101, 0b101],
+      'S': [0b011, 0b100, 0b010, 0b001, 0b110],
+      'T': [0b111, 0b010, 0b010, 0b010, 0b010],
+      'U': [0b101, 0b101, 0b101, 0b101, 0b111],
+      'V': [0b101, 0b101, 0b101, 0b101, 0b010],
+      'W': [0b101, 0b101, 0b111, 0b111, 0b101],
+      'X': [0b101, 0b101, 0b010, 0b101, 0b101],
+      'Y': [0b101, 0b101, 0b010, 0b010, 0b010],
+      'Z': [0b111, 0b001, 0b010, 0b100, 0b111],
+      '0': [0b111, 0b101, 0b101, 0b101, 0b111],
+      '1': [0b010, 0b110, 0b010, 0b010, 0b111],
+      '2': [0b111, 0b001, 0b111, 0b100, 0b111],
+      '3': [0b111, 0b001, 0b011, 0b001, 0b111],
+      '4': [0b101, 0b101, 0b111, 0b001, 0b001],
+      '5': [0b111, 0b100, 0b111, 0b001, 0b111],
+      '6': [0b111, 0b100, 0b111, 0b101, 0b111],
+      '7': [0b111, 0b001, 0b001, 0b010, 0b010],
+      '8': [0b111, 0b101, 0b111, 0b101, 0b111],
+      '9': [0b111, 0b101, 0b111, 0b001, 0b111],
+      ':': [0b000, 0b010, 0b000, 0b010, 0b000],
+      '-': [0b000, 0b000, 0b111, 0b000, 0b000],
+      '.': [0b000, 0b000, 0b000, 0b000, 0b010],
+      ' ': [0b000, 0b000, 0b000, 0b000, 0b000]
+    };
+
     const LANG_COLORS = {
-      TypeScript: [49, 120, 198], JavaScript: [241, 224, 90], Rust: [222, 165, 132],
-      Python: [53, 114, 165], Go: [0, 173, 216], Java: [176, 114, 25],
-      "C++": [243, 75, 125], C: [85, 85, 85], Ruby: [112, 21, 22], Vue: [65, 184, 131]
+      TypeScript: [49, 120, 198],
+      JavaScript: [241, 224, 90],
+      Rust: [222, 165, 132],
+      Python: [53, 114, 165],
+      Go: [0, 173, 216],
+      Java: [176, 114, 25],
+      "C++": [243, 75, 125],
+      C: [85, 85, 85],
+      "C#": [23, 134, 0],
+      Ruby: [112, 21, 22],
+      Vue: [65, 184, 131],
+      HTML: [227, 76, 38],
+      CSS: [86, 61, 124],
+      Shell: [137, 224, 81],
+      Swift: [240, 81, 56],
+      Kotlin: [169, 123, 255],
+      Dart: [0, 180, 219]
     };
 
     function makeRamp(rgb, darkScale = 0.25, lightScale = 1.35) {
@@ -125,11 +224,11 @@
       });
     }
 
-    function buildCoatFromColors(c1 = [49,120,198], c2 = [222,165,132], c3 = [53,114,165]) {
+    function buildCoatFromColors(c1 = [49, 120, 198], c2 = [222, 165, 132], c3 = [53, 114, 165]) {
       return {
         armor: makeRamp(c1, 0.16, 0.58),
         calfBlue: makeRamp(c1, 0.32, 1.25),
-        cream: [[124,132,138],[172,180,186],[216,222,226],[248,250,252]],
+        cream: [[124, 132, 138], [172, 180, 186], [216, 222, 226], [248, 250, 252]],
         crestRed: makeRamp(c2, 0.35, 1.22),
         tipGreen: makeRamp(c3, 0.45, 1.30)
       };
@@ -142,6 +241,20 @@
       const pos = Math.max(0, Math.min(1, b)) * (ramp.length - 1);
       const idx = Math.floor(pos) + ((pos - Math.floor(pos)) > ditherThreshold(x, y) ? 1 : 0);
       return ramp[Math.min(ramp.length - 1, idx)];
+    }
+
+    function hash2D(ix, iy, seed) {
+      let n = (ix * 374761393 + iy * 668265263 + seed * 1442695041) | 0;
+      n = (n ^ (n >> 13)) * 1274126177;
+      return ((n ^ (n >> 16)) >>> 0) / 4294967295.0;
+    }
+    function smoothNoise(x, y, seed) {
+      const ix = Math.floor(x), iy = Math.floor(y);
+      const fx = x - ix, fy = y - iy;
+      const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+      const a = hash2D(ix, iy, seed), b = hash2D(ix + 1, iy, seed);
+      const c = hash2D(ix, iy + 1, seed), d = hash2D(ix + 1, iy + 1, seed);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
     }
 
     function getBio(commits) {
@@ -193,16 +306,52 @@
       return best;
     }
 
-    function renderTulkun(canvas, commits, coat, phase, viewMode) {
-      const ctx = canvas.getContext('2d');
-      const W = canvas.width, H = canvas.height;
-      const img = ctx.createImageData(W, H);
-      const data = img.data;
+    function setOutlinedNativePixel(buf, w, h, px, py, rgb) {
+      if (px <= 0 || px >= w - 1 || py <= 0 || py >= h - 1) return;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nIdx = ((py + dy) * w + (px + dx)) * 4;
+          if (buf[nIdx + 3] === 0) {
+            buf[nIdx] = OUTLINE_COLOR[0];
+            buf[nIdx + 1] = OUTLINE_COLOR[1];
+            buf[nIdx + 2] = OUTLINE_COLOR[2];
+            buf[nIdx + 3] = 255;
+          }
+        }
+      }
+      const idx = (py * w + px) * 4;
+      buf[idx] = rgb[0];
+      buf[idx + 1] = rgb[1];
+      buf[idx + 2] = rgb[2];
+      buf[idx + 3] = 255;
+    }
+
+    function drawNativePixelString(buf, w, h, startX, startY, text, rgb) {
+      let cx = startX;
+      for (const ch of text.toUpperCase()) {
+        const g = GLYPHS_3X5[ch] || GLYPHS_3X5[' '];
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 3; c++) {
+            if ((g[r] >> (2 - c)) & 1) {
+              setOutlinedNativePixel(buf, w, h, cx + c, startY + r, rgb);
+            }
+          }
+        }
+        cx += 4;
+      }
+    }
+
+    // Renders into a 320x140 native pixel buffer, then integer-upscales 4x to 1280x560 so every pixel and HUD glyph is razor-sharp
+    function renderTulkunHiRes(canvas, commits, coat, phase) {
+      const W = NATIVE_W, H = NATIVE_H;
+      const nativeBuf = new Uint8ClampedArray(W * H * 4);
+
       const bio = getBio(commits);
       const bodyLen = bio.bodyLen, maxRadius = bio.maxRadius;
       const N = Math.max(36, Math.round(bodyLen));
       const spine = [];
-      const dir = viewMode === 'dive' ? 1 : -1;
+      const dir = -1;
       const startX = W * 0.50 + dir * (bodyLen * 0.42);
       const centerY = H * 0.44;
       const pitchAngle = Math.cos(phase) * 0.065;
@@ -214,27 +363,27 @@
         const headBob = Math.sin(phase) * (maxRadius * 0.14) * Math.pow(1 - u, 1.3);
         const tailStroke = Math.sin(u * Math.PI * 2.35 - phase) * waveAmp * Math.pow(u, 0.92);
         const pitchOffset = (u - 0.35) * bodyLen * Math.sin(pitchAngle);
-        let y = centerY + headBob + tailStroke + pitchOffset;
-        if (viewMode === 'dive') {
-          y += -Math.sin(u * Math.PI * 0.92) * (maxRadius * 1.05) + (u < 0.45 ? Math.pow((0.45 - u) / 0.45, 1.4) * (maxRadius * 0.70) : 0);
-        }
+        const y = centerY + headBob + tailStroke + pitchOffset;
+
         let rTop, rBot;
         if (u < 0.24) {
           const hu = u / 0.24;
           rTop = maxRadius * lerp(0.38, 0.92, Math.pow(hu, 0.55));
           const calfBump = Math.sin(hu * Math.PI) * (maxRadius * 0.16);
           const femWedge = Math.pow(Math.max(0, 1 - hu), 1.2) * Math.sin(Math.min(1, hu * 4) * 1.57) * (maxRadius * 0.65);
-          const bullCrest = hu < 0.45 ? Math.sin((hu / 0.45) * 1.57) * (maxRadius * 1.35) : Math.pow(Math.max(0, (1 - hu) / 0.55), 1.6) * (maxRadius * 0.75);
-          if (viewMode !== 'top') {
-            rTop += calfBump * (1 - bio.femalePhase) + femWedge * bio.femalePhase * (1 - bio.bullPhase * 0.4) + bullCrest * bio.bullPhase;
-          }
+          const bullCrest = hu < 0.45
+            ? Math.sin((hu / 0.45) * 1.57) * (maxRadius * 1.35)
+            : Math.pow(Math.max(0, (1 - hu) / 0.55), 1.6) * (maxRadius * 0.75);
+          rTop += calfBump * (1 - bio.femalePhase) + femWedge * bio.femalePhase * (1 - bio.bullPhase * 0.4) + bullCrest * bio.bullPhase;
           rBot = maxRadius * lerp(0.32, 0.96, Math.sin(Math.min(1, hu * 1.3) * 1.57));
         } else if (u < 0.68) {
           const env = Math.cos(((u - 0.24) / 0.44) * Math.PI * 0.48);
-          rTop = maxRadius * 0.95 * env; rBot = maxRadius * 0.98 * env;
+          rTop = maxRadius * 0.95 * env;
+          rBot = maxRadius * 0.98 * env;
         } else {
           const taper = lerp(0.48, 0.13, Math.pow((u - 0.68) / 0.32, 0.85));
-          rTop = maxRadius * taper; rBot = maxRadius * taper;
+          rTop = maxRadius * taper;
+          rBot = maxRadius * taper;
         }
         spine.push({ x, y, rTop: Math.max(1.2, rTop), rBot: Math.max(1.2, rBot), r: (rTop + rBot) * 0.5, u });
       }
@@ -246,54 +395,61 @@
       const auxFlap = Math.cos(phase - 0.95) * (maxRadius * 0.42);
       const flukeWhip = Math.cos(phase - 2.05) * (maxRadius * 0.72);
 
-      if (viewMode === 'top') {
-        for (const side of [-1, 1]) {
-          const mainRoot = getPt(0.38), mainLen = maxRadius * 3.1 * finScale;
-          parts.push({ z: 3, kind: 'mainWing', pts: [
-            { x: mainRoot.x, y: mainRoot.y + side * mainRoot.r * 0.75, r: maxRadius * 0.42 },
-            { x: mainRoot.x - dir * (mainLen * 0.5 + wingFlap * 0.5), y: mainRoot.y + side * (mainRoot.r + mainLen * 0.75), r: maxRadius * 0.28 },
-            { x: mainRoot.x - dir * (mainLen * 0.95 + wingFlap), y: mainRoot.y + side * (mainRoot.r + mainLen * 1.12), r: 1.0 }
-          ]});
-          const cRoot = getPt(0.96), cLen = maxRadius * 2.1 * finScale;
-          parts.push({ z: 2, kind: 'fluke', pts: [
-            { x: cRoot.x, y: cRoot.y + side * 1.5, r: maxRadius * 0.26 },
-            { x: cRoot.x - dir * cLen * 1.0, y: cRoot.y + side * cLen * 0.7 + flukeWhip * 0.5, r: 1.0 }
-          ]});
-        }
-      } else {
-        const opRoot = getPt(0.24), opLen = maxRadius * 1.15 * finScale;
-        parts.push({ z: 3, kind: 'opercular', pts: [
-          { x: opRoot.x, y: opRoot.y + opRoot.rBot * 0.35, r: maxRadius * 0.28 },
-          { x: opRoot.x - dir * opLen * 0.55, y: opRoot.y + opRoot.rBot * 0.35 + opLen * 0.95 + auxFlap, r: 1.1 }
-        ]});
-        if (bio.kuruScale > 0.05) {
-          const kEnd = getPt(0.44);
-          parts.push({ z: 2, kind: 'kuru', pts: [
-            { x: opRoot.x - dir * 3, y: opRoot.y + opRoot.rBot * 0.85, r: 1.2 },
-            { x: (opRoot.x + kEnd.x) * 0.5, y: opRoot.y + opRoot.rBot * 1.25 + 3 + auxFlap * 0.6, r: 1.0 },
-            { x: kEnd.x, y: kEnd.y + kEnd.rBot * 0.75, r: 0.9 }
-          ]});
-        }
-        const mainRoot = getPt(0.38), wingLen = maxRadius * 3.45 * finScale;
-        parts.push({ z: 4, kind: 'mainWing', pts: [
-          { x: mainRoot.x, y: mainRoot.y + mainRoot.rBot * 0.22, r: maxRadius * 0.42 },
-          { x: mainRoot.x - dir * wingLen * 0.5, y: mainRoot.y + wingLen * 0.42 + wingFlap * 0.55, r: maxRadius * 0.30 },
-          { x: mainRoot.x - dir * wingLen * 1.02, y: mainRoot.y + wingLen * 0.72 + wingFlap * 1.15, r: 1.1 }
-        ]});
-        const tailRoot = getPt(0.96), fLen = maxRadius * 2.15 * finScale;
-        parts.push({ z: -1, kind: 'fluke', pts: [
-          { x: tailRoot.x, y: tailRoot.y, r: tailRoot.r * 0.9 },
-          { x: tailRoot.x - dir * fLen * 0.98, y: tailRoot.y - fLen * 0.20 + flukeWhip, r: 0.9 }
-        ]});
-        parts.push({ z: 2, kind: 'fluke', pts: [
-          { x: tailRoot.x, y: tailRoot.y + 1, r: tailRoot.r * 0.95 },
-          { x: tailRoot.x - dir * fLen * 1.05, y: tailRoot.y + fLen * 0.32 + flukeWhip, r: 0.9 }
+      const opRoot = getPt(0.24), opLen = maxRadius * 1.15 * finScale;
+      parts.push({ z: 3, kind: 'opercular', pts: [
+        { x: opRoot.x, y: opRoot.y + opRoot.rBot * 0.35, r: maxRadius * 0.28 },
+        { x: opRoot.x - dir * opLen * 0.35, y: opRoot.y + opRoot.rBot * 0.35 + opLen * 0.65 + auxFlap * 0.5, r: maxRadius * 0.22 },
+        { x: opRoot.x - dir * opLen * 0.55, y: opRoot.y + opRoot.rBot * 0.35 + opLen * 0.95 + auxFlap, r: 1.1 }
+      ]});
+
+      if (bio.kuruScale > 0.05) {
+        const kEnd = getPt(0.44);
+        parts.push({ z: 2, kind: 'kuru', pts: [
+          { x: opRoot.x - dir * 3, y: opRoot.y + opRoot.rBot * 0.85, r: 1.2 },
+          { x: (opRoot.x + kEnd.x) * 0.5, y: opRoot.y + opRoot.rBot * 1.25 + 3 + auxFlap * 0.6, r: 1.0 },
+          { x: kEnd.x, y: kEnd.y + kEnd.rBot * 0.75, r: 0.9 }
         ]});
       }
 
-      const fitScale = 0.78;
-      const targetCX = W * 0.52 + Math.sin(phase) * 4.0;
-      const targetCY = (H - 22) * 0.46 + Math.cos(phase) * 1.8;
+      const mainRoot = getPt(0.38), wingLen = maxRadius * 3.55 * finScale;
+      parts.push({ z: 4, kind: 'mainWing', pts: [
+        { x: mainRoot.x, y: mainRoot.y + mainRoot.rBot * 0.22, r: maxRadius * 0.42 },
+        { x: mainRoot.x - dir * wingLen * 0.36, y: mainRoot.y + wingLen * 0.28 + wingFlap * 0.35, r: maxRadius * 0.36 },
+        { x: mainRoot.x - dir * wingLen * 0.72, y: mainRoot.y + wingLen * 0.54 + wingFlap * 0.75, r: maxRadius * 0.24 },
+        { x: mainRoot.x - dir * wingLen * 1.02, y: mainRoot.y + wingLen * 0.72 + wingFlap * 1.15, r: 1.1 }
+      ]});
+
+      if (bio.maturity > 0.22) {
+        const vRoot = getPt(0.45), vLen = maxRadius * 1.85 * finScale * bio.maturity;
+        parts.push({ z: -2, kind: 'auxFlipper', pts: [
+          { x: vRoot.x, y: vRoot.y + vRoot.rBot * 0.75, r: maxRadius * 0.30 },
+          { x: vRoot.x - dir * (vLen * 0.12 - auxFlap * 0.3), y: vRoot.y + vRoot.rBot * 0.75 + vLen * 0.65, r: maxRadius * 0.22 },
+          { x: vRoot.x - dir * (vLen * 0.24 - auxFlap * 0.6), y: vRoot.y + vRoot.rBot * 0.75 + vLen * 1.02, r: 1.0 }
+        ]});
+      }
+
+      const pelvRoot = getPt(0.82), pScale = maxRadius * 1.10 * finScale;
+      parts.push({ z: -1, kind: 'fluke', pts: [
+        { x: pelvRoot.x, y: pelvRoot.y + pelvRoot.rBot * 0.6, r: pScale * 0.24 },
+        { x: pelvRoot.x - dir * pScale * 0.55, y: pelvRoot.y + pelvRoot.rBot * 0.7 + pScale * 0.45 + flukeWhip * 0.4, r: pScale * 0.32 },
+        { x: pelvRoot.x - dir * pScale * 0.85, y: pelvRoot.y + pelvRoot.rBot * 0.7 + pScale * 0.62 + flukeWhip * 0.7, r: 1.1 }
+      ]});
+
+      const tailRoot = getPt(0.96), fLen = maxRadius * 2.20 * finScale;
+      parts.push({ z: -1, kind: 'fluke', pts: [
+        { x: tailRoot.x, y: tailRoot.y, r: tailRoot.r * 0.9 },
+        { x: tailRoot.x - dir * fLen * 0.55, y: tailRoot.y - fLen * 0.14 + flukeWhip * 0.5, r: maxRadius * 0.25 },
+        { x: tailRoot.x - dir * fLen * 0.98, y: tailRoot.y - fLen * 0.20 + flukeWhip, r: 0.9 }
+      ]});
+      parts.push({ z: 2, kind: 'fluke', pts: [
+        { x: tailRoot.x, y: tailRoot.y + 1, r: tailRoot.r * 0.95 },
+        { x: tailRoot.x - dir * fLen * 0.50, y: tailRoot.y + fLen * 0.16 + flukeWhip * 0.5, r: maxRadius * 0.28 },
+        { x: tailRoot.x - dir * fLen * 1.05, y: tailRoot.y + fLen * 0.32 + flukeWhip, r: 0.9 }
+      ]});
+
+      const fitScale = 0.76;
+      const targetCX = W * 0.52 + Math.sin(phase) * 4.5;
+      const targetCY = (H - 22) * 0.46 + Math.cos(phase) * 2.0;
       for (const p of spine) {
         p.x = targetCX + (p.x - W * 0.5) * fitScale;
         p.y = targetCY + (p.y - H * 0.44) * fitScale;
@@ -312,16 +468,24 @@
       const bgParts = parts.filter(p => p.z < 0);
 
       function shadePart(part, s, px, py, pIdx) {
-        let ramp = (part.kind === 'mainWing' || part.kind === 'opercular') && (s.u > 0.62 || Math.abs(s.latFrac) > 0.38)
-          ? coat.cream : (bio.maturity < 0.4 ? coat.calfBlue : coat.armor);
-        if (part.kind === 'kuru') ramp = coat.calfBlue;
+        let ramp = bio.maturity < 0.35 ? coat.calfBlue : coat.armor;
+        if (part.kind === 'mainWing' || part.kind === 'opercular') {
+          ramp = (s.u > 0.62 || Math.abs(s.latFrac) > 0.38) ? coat.cream : (bio.maturity < 0.4 ? coat.calfBlue : coat.armor);
+        } else if (part.kind === 'fluke') {
+          const fd = smoothNoise(s.u * 6.0, s.latFrac * 4.0, 55);
+          ramp = fd < bio.maturity * 1.15 ? (bio.maturity < 0.45 ? coat.calfBlue : coat.armor) : coat.cream;
+        } else if (part.kind === 'kuru') {
+          ramp = coat.calfBlue;
+        }
         if (s.dist > s.activeR - 0.7 && s.activeR > 1.6) {
-          const c = ramp[0]; data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255; return;
+          const c = ramp[0];
+          nativeBuf[pIdx] = c[0]; nativeBuf[pIdx + 1] = c[1]; nativeBuf[pIdx + 2] = c[2]; nativeBuf[pIdx + 3] = 255;
+          return;
         }
         const nz = Math.sqrt(Math.max(0, 1 - (s.nx * s.nx + s.ny * s.ny)));
         const bright = 0.26 + 0.72 * Math.max(0, s.nx * LIGHT[0] + s.ny * LIGHT[1] + nz * LIGHT[2]);
         const c = chooseShade(ramp, bright, px, py);
-        data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255;
+        nativeBuf[pIdx] = c[0]; nativeBuf[pIdx + 1] = c[1]; nativeBuf[pIdx + 2] = c[2]; nativeBuf[pIdx + 3] = 255;
       }
 
       for (let py = 2; py < H - 2; py++) {
@@ -333,21 +497,41 @@
             if (s) { shadePart(part, s, px, py, pIdx); hit = true; break; }
           }
           if (hit) continue;
+
           const b = sampleChain(spine, sx, sy);
           if (b) {
-            if (viewMode !== 'top' && bio.bullPhase > 0.35 && b.u > 0.08 && b.u < 0.18 && b.ny < -0.55 && (b.u - 0.08) / 0.10 < 0.65 * bio.bullPhase) continue;
+            if (bio.bullPhase > 0.35 && b.u > 0.08 && b.u < 0.18 && b.ny < -0.55 && (b.u - 0.08) / 0.10 < 0.65 * bio.bullPhase) continue;
             let ramp = bio.maturity < 0.38 ? coat.calfBlue : coat.armor;
-            if (b.ny > 0.12) ramp = (bio.maturity < 0.55 || b.u < 0.35) ? coat.cream : coat.calfBlue;
-            if (b.u < 0.18 && b.ny < -0.38) ramp = coat.crestRed;
-            if (viewMode !== 'top' && Math.abs(b.u - 0.185) * bodyLen * fitScale < 2.2 && Math.abs(b.ny - 0.02) * b.activeR < 2.2) {
-              data[pIdx] = 240; data[pIdx+1] = 175; data[pIdx+2] = 95; data[pIdx+3] = 255; continue;
+            const isVentral = b.ny > 0.12;
+            if (isVentral) ramp = (bio.maturity < 0.55 || b.u < 0.35) ? coat.cream : coat.calfBlue;
+            if (b.u < 0.18 && b.ny < -0.38) {
+              ramp = (bio.femalePhase > 0.3 && bio.bullPhase < 0.4 && b.u < 0.04) ? coat.tipGreen : coat.crestRed;
+            }
+            if (b.u > 0.03 && b.u < 0.22 && b.ny > -0.15 && b.ny < 0.68) {
+              const tooth = Math.sin((b.u - 0.03) * bio.jawToothCount * 32.0);
+              ramp = b.ny > 0.15 + Math.max(0, tooth) * 0.32 ? coat.cream : (bio.maturity < 0.38 ? coat.calfBlue : coat.armor);
+            }
+            if (!isVentral && b.u > 0.18) {
+              const swirl = Math.sin(b.u * 34.0 - b.ny * 5.0) + 0.5 * Math.cos(b.u * 19.0 + b.ny * 7.0);
+              if (swirl > lerp(0.15, 1.18, bio.maturity)) ramp = coat.cream;
+            }
+            if (Math.abs(b.u - 0.185) * bodyLen * fitScale < 2.2 && Math.abs(b.ny - 0.02) * b.activeR < 2.2) {
+              nativeBuf[pIdx] = 240; nativeBuf[pIdx + 1] = 175; nativeBuf[pIdx + 2] = 95; nativeBuf[pIdx + 3] = 255;
+              continue;
+            }
+            if (b.dist > b.activeR - 0.8) {
+              const c = ramp[0];
+              nativeBuf[pIdx] = c[0]; nativeBuf[pIdx + 1] = c[1]; nativeBuf[pIdx + 2] = c[2]; nativeBuf[pIdx + 3] = 255;
+              continue;
             }
             const nz = Math.sqrt(Math.max(0, 1 - (b.nx * b.nx + b.ny * b.ny)));
-            const bright = 0.24 + 0.74 * Math.max(0, b.nx * LIGHT[0] + b.ny * LIGHT[1] + nz * LIGHT[2]);
+            let bright = 0.24 + 0.74 * Math.max(0, b.nx * LIGHT[0] + b.ny * LIGHT[1] + nz * LIGHT[2]);
+            if (b.ny > 0.2 && b.u > 0.45 && b.u < 0.85 && Math.sin(b.u * 65.0) > 0.62) bright -= 0.22;
             const c = chooseShade(ramp, bright, px, py);
-            data[pIdx] = c[0]; data[pIdx+1] = c[1]; data[pIdx+2] = c[2]; data[pIdx+3] = 255;
+            nativeBuf[pIdx] = c[0]; nativeBuf[pIdx + 1] = c[1]; nativeBuf[pIdx + 2] = c[2]; nativeBuf[pIdx + 3] = 255;
             continue;
           }
+
           for (const part of bgParts) {
             const s = sampleChain(part.pts, sx, sy);
             if (s) { shadePart(part, s, px, py, pIdx); break; }
@@ -355,26 +539,58 @@
         }
       }
 
-      // 1px outline
+      // 1px Dark Outline Pass around the Tulkun
       const mask = new Uint8Array(W * H);
-      for (let i = 0; i < W * H; i++) mask[i] = data[i * 4 + 3];
+      for (let i = 0; i < W * H; i++) mask[i] = nativeBuf[i * 4 + 3];
       for (let py = 2; py < H - 2; py++) {
         for (let px = 2; px < W - 2; px++) {
           const i = py * W + px;
           if (mask[i] !== 0) continue;
           if (mask[i - 1] || mask[i + 1] || mask[i - W] || mask[i + W]) {
             const pIdx = i * 4;
-            data[pIdx] = OUTLINE_COLOR[0]; data[pIdx+1] = OUTLINE_COLOR[1]; data[pIdx+2] = OUTLINE_COLOR[2]; data[pIdx+3] = 255;
+            nativeBuf[pIdx] = OUTLINE_COLOR[0];
+            nativeBuf[pIdx + 1] = OUTLINE_COLOR[1];
+            nativeBuf[pIdx + 2] = OUTLINE_COLOR[2];
+            nativeBuf[pIdx + 3] = 255;
           }
         }
       }
 
-      ctx.putImageData(img, 0, 0);
-      ctx.fillStyle = "#f0f6fc";
-      ctx.font = "bold 7px monospace";
-      ctx.fillText("AVATAR: TULKUN", 8, H - 11);
-      ctx.fillStyle = "#58a6ff";
-      ctx.fillText(`CONTRIBUTIONS: ${commits}`, 8, H - 3);
+      // Crisp 3x5 Outlined Pixel-Art HUD in bottom-left corner (never blurry!)
+      const line1Y = H - 17;
+      const line2Y = H - 9;
+      for (let dy = 0; dy < 5; dy++) {
+        for (let dx = 0; dx < 3; dx++) {
+          setOutlinedNativePixel(nativeBuf, W, H, 8 + dx, line1Y + dy, coat.calfBlue[3]);
+        }
+      }
+      drawNativePixelString(nativeBuf, W, H, 14, line1Y, "AVATAR: TULKUN", coat.cream[3]);
+      drawNativePixelString(nativeBuf, W, H, 8, line2Y, `CONTRIBUTIONS: ${commits}`, coat.calfBlue[3]);
+
+      // Integer 4x Nearest-Neighbor Upscale into 1280x560 Canvas ImageData
+      const ctx = canvas.getContext('2d');
+      const outW = W * SCALE, outH = H * SCALE;
+      const outImg = ctx.createImageData(outW, outH);
+      const outData = outImg.data;
+      for (let ny = 0; ny < H; ny++) {
+        for (let nx = 0; nx < W; nx++) {
+          const sIdx = (ny * W + nx) * 4;
+          const r = nativeBuf[sIdx], g = nativeBuf[sIdx + 1], b = nativeBuf[sIdx + 2], a = nativeBuf[sIdx + 3];
+          if (a === 0) continue;
+          const baseY = ny * SCALE, baseX = nx * SCALE;
+          for (let dy = 0; dy < SCALE; dy++) {
+            let dRow = ((baseY + dy) * outW + baseX) * 4;
+            for (let dx = 0; dx < SCALE; dx++) {
+              outData[dRow] = r;
+              outData[dRow + 1] = g;
+              outData[dRow + 2] = b;
+              outData[dRow + 3] = a;
+              dRow += 4;
+            }
+          }
+        }
+      }
+      ctx.putImageData(outImg, 0, 0);
     }
 
     let primaryUser = "PramudithaN";
@@ -382,40 +598,43 @@
     let primaryCoat = buildCoatFromColors();
     let friendUser = "";
     let friendCommits = 62;
-    let friendCoat = buildCoatFromColors([222,165,132], [49,120,198], [65,184,131]);
-    let currentView = "side";
+    let friendCoat = buildCoatFromColors([222, 165, 132], [49, 120, 198], [65, 184, 131]);
     let phase = 0;
 
     function updateSnippets() {
       const yaml = `name: Update Tulkun
+
 on:
   schedule: [{ cron: "0 0 * * *" }]
   workflow_dispatch:
   push: { branches: [main] }
+
 permissions:
   contents: write
+
 jobs:
   tulkun:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: PramudithaN/git-tulkun@v1
-        with:
-          view: ${currentView}
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tulkun/
           git diff --cached --quiet || git commit -m "chore: update Tulkun"
           git push`;
+
       const md = `<p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
     <img src="tulkun/tulkun.gif" width="640" alt="${primaryUser}'s GitHub Tulkun" />
   </a>
 </p>`;
+
       document.getElementById("yamlCode").textContent = yaml;
       document.getElementById("mdCode").textContent = md;
-      document.getElementById("primaryCaption").textContent = `@${primaryUser} — ${getStageTitle(primaryCommits)} (${primaryCommits} contributions)`;
+      document.getElementById("stageBadge").textContent = getStageTitle(primaryCommits);
+      document.getElementById("primaryCaption").textContent = `@${primaryUser} (${getStageTitle(primaryCommits)} • ${primaryCommits} contributions)`;
     }
 
     async function fetchGitHubProfile(login, isFriend = false) {
@@ -425,18 +644,20 @@ jobs:
         const repos = await res.json();
         const counts = {};
         for (const r of repos) {
-          if (r.language && LANG_COLORS[r.language]) counts[r.language] = (counts[r.language] || 0) + 1;
+          if (r.language && LANG_COLORS[r.language]) {
+            counts[r.language] = (counts[r.language] || 0) + 1;
+          }
         }
         const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-        const c1 = LANG_COLORS[top[0]] || [49,120,198];
-        const c2 = LANG_COLORS[top[1]] || [222,165,132];
-        const c3 = LANG_COLORS[top[2]] || [53,114,165];
-        const estCommits = Math.min(150, Math.max(12, repos.length * 4));
+        const c1 = LANG_COLORS[top[0]] || [49, 120, 198];
+        const c2 = LANG_COLORS[top[1]] || [222, 165, 132];
+        const c3 = LANG_COLORS[top[2]] || [53, 114, 165];
+        const estCommits = Math.min(150, Math.max(14, repos.length * 4));
         if (isFriend) {
           friendUser = login;
           friendCommits = estCommits;
           friendCoat = buildCoatFromColors(c1, c2, c3);
-          document.getElementById("friendCaption").textContent = `@${friendUser} — ${getStageTitle(friendCommits)} (~${friendCommits} contributions)`;
+          document.getElementById("friendCaption").textContent = `@${friendUser} (${getStageTitle(friendCommits)} • ~${friendCommits} contributions)`;
           document.getElementById("friendCard").classList.remove("hidden");
           document.getElementById("canvasGrid").className = "grid grid-cols-1 md:grid-cols-2 gap-4";
         } else {
@@ -458,41 +679,90 @@ jobs:
       const f = document.getElementById("friendInput").value.trim();
       if (f) fetchGitHubProfile(f, true);
     });
+    document.getElementById("closeCompareBtn").addEventListener("click", () => {
+      friendUser = "";
+      document.getElementById("friendCard").classList.add("hidden");
+      document.getElementById("canvasGrid").className = "grid grid-cols-1 gap-4";
+    });
     document.getElementById("commitSlider").addEventListener("input", (e) => {
       primaryCommits = parseInt(e.target.value, 10);
       document.getElementById("commitReadout").textContent = primaryCommits;
       updateSnippets();
     });
-    document.getElementById("viewSelect").addEventListener("change", (e) => {
-      currentView = e.target.value;
-      updateSnippets();
-    });
-    document.getElementById("copyYamlBtn").addEventListener("click", () => {
+    document.getElementById("copyYamlBtn").addEventListener("click", (e) => {
       navigator.clipboard.writeText(document.getElementById("yamlCode").textContent);
+      e.target.textContent = "Copied!";
+      setTimeout(() => { e.target.textContent = "Copy Workflow YAML"; }, 1500);
     });
-    document.getElementById("copyMdBtn").addEventListener("click", () => {
+    document.getElementById("copyMdBtn").addEventListener("click", (e) => {
       navigator.clipboard.writeText(document.getElementById("mdCode").textContent);
+      e.target.textContent = "Copied!";
+      setTimeout(() => { e.target.textContent = "Copy Markdown"; }, 1500);
     });
+
+    // High-Resolution 1280x640 Share Card Exporter with Crisp Vector Header & 4x Pixel-Art Tulkun
     document.getElementById("downloadShareBtn").addEventListener("click", () => {
       const shareCanvas = document.createElement("canvas");
       shareCanvas.width = 1280;
       shareCanvas.height = 640;
       const sctx = shareCanvas.getContext("2d");
-      sctx.imageSmoothingEnabled = false;
+
+      // Deep ocean slate card background
       sctx.fillStyle = "#0d1117";
       sctx.fillRect(0, 0, 1280, 640);
-      sctx.drawImage(document.getElementById("mainCanvas"), 40, 60, 1200, 525);
+
+      // Outer border frame
+      sctx.strokeStyle = "#30363d";
+      sctx.lineWidth = 4;
+      sctx.strokeRect(16, 16, 1248, 608);
+
+      // Top header bar
+      sctx.fillStyle = "#161b22";
+      sctx.fillRect(18, 18, 1244, 68);
+      sctx.strokeStyle = "#30363d";
+      sctx.lineWidth = 2;
+      sctx.beginPath();
+      sctx.moveTo(18, 86);
+      sctx.lineTo(1262, 86);
+      sctx.stroke();
+
+      // Crisp high-resolution header text
+      sctx.fillStyle = "#f0f6fc";
+      sctx.font = "bold 24px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      sctx.fillText(`GitTulkun  |  @${primaryUser}`, 40, 60);
+
+      sctx.fillStyle = "#58a6ff";
+      sctx.font = "600 22px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      const rightText = `${getStageTitle(primaryCommits)} (${primaryCommits} Contributions)`;
+      const tw = sctx.measureText(rightText).width;
+      sctx.fillText(rightText, 1240 - tw, 60);
+
+      // Draw 1280x560 4x pixel-art canvas without smoothing
+      sctx.imageSmoothingEnabled = false;
+      sctx.drawImage(document.getElementById("mainCanvas"), 0, 72, 1280, 560);
+
+      // Bottom-right stage progression indicator
+      const stages = ["1. Calf", "2. Yearling", "3. Adolescent", "4. Female", "5. Bull"];
+      const activeIdx = primaryCommits >= 115 ? 4 : primaryCommits >= 75 ? 3 : primaryCommits >= 40 ? 2 : primaryCommits >= 15 ? 1 : 0;
+      let sx = 640;
+      sctx.font = "bold 17px monospace";
+      for (let i = 0; i < stages.length; i++) {
+        sctx.fillStyle = i === activeIdx ? "#f0f6fc" : i < activeIdx ? "#58a6ff" : "#484f58";
+        sctx.fillText(stages[i], sx, 598);
+        sx += sctx.measureText(stages[i]).width + 24;
+      }
+
       const a = document.createElement("a");
-      a.download = `${primaryUser}-tulkun-this-year.png`;
+      a.download = `${primaryUser}-tulkun-share-card.png`;
       a.href = shareCanvas.toDataURL("image/png");
       a.click();
     });
 
     function animate() {
       phase += 0.12;
-      renderTulkun(document.getElementById("mainCanvas"), primaryCommits, primaryCoat, phase, currentView);
+      renderTulkunHiRes(document.getElementById("mainCanvas"), primaryCommits, primaryCoat, phase);
       if (friendUser) {
-        renderTulkun(document.getElementById("friendCanvas"), friendCommits, friendCoat, phase + 1.2, currentView);
+        renderTulkunHiRes(document.getElementById("friendCanvas"), friendCommits, friendCoat, phase + 1.2);
       }
       setTimeout(() => requestAnimationFrame(animate), 66);
     }

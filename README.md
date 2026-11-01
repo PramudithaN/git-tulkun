@@ -7,7 +7,7 @@ A procedural pixel-art **Tulkun** leviathan for your GitHub profile `README.md` 
     <img src="tulkun/tulkun.gif?v=7" width="640" alt="Live GitTulkun rendered from @PramudithaN's GitHub activity" />
   </a>
   <br />
-  <em>Live Tulkun generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s current-year GitHub activity (1,072 contributions — Stage 5: Adult Male Bull)</em>
+  <em>Live Tulkun generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s current-year GitHub activity (1,072 contributions - Stage 5: Adult Male Bull)</em>
 </p>
 
 ## Quick Start (Copy & Paste)
@@ -64,7 +64,7 @@ jobs:
 
 ## Share "Your Tulkun This Year" & Compare With Friends
 
-Every workflow run automatically generates a `1280×640` social card at **`tulkun/share-card.png`** showing your current annual stage (`1.CALF` $\rightarrow$ `5.BULL`), contribution count, and language palette — ready to post on X, LinkedIn, or Discord when the **January 1st reset** begins or when your whale reaches **Stage 5: Adult Bull**:
+Every workflow run automatically generates a `1280×640` social card at **`tulkun/share-card.png`** showing your current annual stage (`1.CALF` $\rightarrow$ `5.BULL`), contribution count, and language palette, ready to post on X, LinkedIn, or Discord when the **January 1st reset** begins or when your whale reaches **Stage 5: Adult Bull**:
 
 <p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
