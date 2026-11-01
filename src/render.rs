@@ -979,7 +979,7 @@ fn paint_metrics_hud(
         }
     }
 
-    let line1 = "WHALE: TULKEN";
+    let line1 = "AVATAR: TULKEN";
     draw_pixel_string(rgba_pixels, w, h, base_x + 6, line1_y, line1, coat.cream[3]);
 
     let line2 = format!("CONTRIBUTIONS: {contributions}");
