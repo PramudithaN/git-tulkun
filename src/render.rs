@@ -570,7 +570,7 @@ fn build_pose_geometry(
     h: u32,
 ) -> (Vec<SpineNode>, Vec<AppendagePart>) {
     let body_len = bio.body_len;
-    let _max_radius = bio.max_radius;
+    let max_radius = bio.max_radius;
     let n_pts = (body_len.round() as usize).max(36);
     let mut spine = Vec::with_capacity(n_pts);
 
