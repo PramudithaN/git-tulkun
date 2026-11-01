@@ -7,7 +7,7 @@
 > Procedural pixel-art Pandoran **Tulkun** leviathan whale generated from your GitHub contributions and repository language colors, rendered as a seamless 15 FPS looping GIF for your GitHub profile or repository `README.md`.
 
 <p align="center">
-  <img src="tulkun/tulkun.gif?v=4" width="640" alt="Live GitTulkun rendered from @PramudithaN's GitHub activity" />
+  <img src="tulkun/tulkun.gif?v=5" width="640" alt="Live GitTulkun rendered from @PramudithaN's GitHub activity" />
   <br />
   <em>Live Tulkun generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s current-year GitHub activity (1,072 contributions - Adult Male Bull)</em>
 </p>
@@ -47,10 +47,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Tulkun GIF and PNG
-        uses: PramudithaN/git-tulkun@v0.1.5
+        uses: PramudithaN/git-tulkun@v0.1.6
         with:
           login: ${{ github.repository_owner }}
-          view: side        # Options: side | dive | top
+          view: side        # Options: side (full 3D swim, bank & top-down roll loop) | dive | top
           canon: "false"    # Set to "true" for movie colors instead of GitHub language colors
           output-dir: tulkun
 
@@ -85,23 +85,23 @@ Instead of static spritesheets, `git-tulkun` uses a mathematical spline and sign
 
 | Stage | Current-Year Contributions | Live 15 FPS Animation | Anatomical Changes Unlocked |
 | :--- | :---: | :---: | :--- |
-| **Stage 1**<br/>**Baby Calf** | **`1 – 14`**<br/>contributions | <img src="docs/stage1-calf/tulkun.gif?v=4" width="320" alt="Stage 1 Baby Calf" /> | Compact `64px` spine, blunt teal-blue snout with a flat oval sensor dimple, light cream dorsal swirl patches, bright cream belly, and stubby fins with pale cream tail flukes. |
-| **Stage 2**<br/>**Yearling Calf** | **`15 – 39`**<br/>contributions | <img src="docs/stage2-yearling/tulkun.gif?v=4" width="320" alt="Stage 2 Yearling Calf" /> | Spine lengthens (`95px`) and slims down; *kuru* neural whips sprout behind the anterior opercular flippers while tail flukes begin darkening at the base. |
-| **Stage 3**<br/>**Adolescent** | **`40 – 74`**<br/>contributions | <img src="docs/stage3-adolescent/tulkun.gif?v=4" width="320" alt="Stage 3 Adolescent" /> | Sensor crest rises and slopes forward; all 6 pectoral and ventral flippers elongate with crisp white leading edges, and secondary pelvic accessory paddles widen under the tail stock. |
-| **Stage 4**<br/>**Adult Female** | **`75 – 114`**<br/>contributions | <img src="docs/stage4-female/tulkun.gif?v=4" width="320" alt="Stage 4 Adult Female" /> | Dark charcoal carapace armor replaces the pale calf dorsal patches; forward-jutting sloped maroon sensor crest with an olive-gold front tip, 5 sharp sawtooth jaw triangles, and segmented cerulean tail pleats. |
-| **Stage 5**<br/>**Adult Male Bull** | **`115+`**<br/>contributions | <img src="docs/stage5-bull/tulkun.gif?v=4" width="320" alt="Stage 5 Adult Male Bull" /> | Maximum `186px` leviathan length and full scythe-wing span; towering vertical hooked hammer-crest with concave rear overhang, 6 serrated jaw triangles, and white carapace battle-scars. |
+| **Stage 1**<br/>**Baby Calf** | **`1 – 14`**<br/>contributions | <img src="docs/stage1-calf/tulkun.gif?v=5" width="320" alt="Stage 1 Baby Calf" /> | Compact `64px` spine, blunt teal-blue snout with a flat oval sensor dimple, light cream dorsal swirl patches, bright cream belly, and stubby fins with pale cream tail flukes. |
+| **Stage 2**<br/>**Yearling Calf** | **`15 – 39`**<br/>contributions | <img src="docs/stage2-yearling/tulkun.gif?v=5" width="320" alt="Stage 2 Yearling Calf" /> | Spine lengthens (`95px`) and slims down; *kuru* neural whips sprout behind the anterior opercular flippers while tail flukes begin darkening at the base. |
+| **Stage 3**<br/>**Adolescent** | **`40 – 74`**<br/>contributions | <img src="docs/stage3-adolescent/tulkun.gif?v=5" width="320" alt="Stage 3 Adolescent" /> | Sensor crest rises and slopes forward; all 6 pectoral and ventral flippers elongate with crisp white leading edges, and secondary pelvic accessory paddles widen under the tail stock. |
+| **Stage 4**<br/>**Adult Female** | **`75 – 114`**<br/>contributions | <img src="docs/stage4-female/tulkun.gif?v=5" width="320" alt="Stage 4 Adult Female" /> | Dark charcoal carapace armor replaces the pale calf dorsal patches; forward-jutting sloped maroon sensor crest with an olive-gold front tip, 5 sharp sawtooth jaw triangles, and segmented cerulean tail pleats. |
+| **Stage 5**<br/>**Adult Male Bull** | **`115+`**<br/>contributions | <img src="docs/stage5-bull/tulkun.gif?v=5" width="320" alt="Stage 5 Adult Male Bull" /> | Maximum `186px` leviathan length and full scythe-wing span; towering vertical hooked hammer-crest with concave rear overhang, 6 serrated jaw triangles, and white carapace battle-scars. |
 
 ---
 
 ## Camera Perspectives (`view`)
 
-You can render your Tulkun from **3 camera angles** using the `view` input (`side`, `dive`, or `top`):
+You can render your Tulkun from **3 camera modes** using the `view` input (`side`, `dive`, or `top`):
 
 | Camera Mode | Live Animated Preview | Description |
 | :--- | :---: | :--- |
-| **`view: side`**<br/>*(Default)* | <img src="docs/stage5-bull/tulkun.gif?v=4" width="360" alt="Side Profile Swim" /> | **Lateral Side Swim**: Displays the hooked hammer-crest, serrated jaw war-stripes, looping *kuru* whip, and full vertical S-wave tail strokes. |
-| **`view: dive`** | <img src="docs/view-dive/tulkun.gif?v=4" width="360" alt="3/4 Dynamic Dive" /> | **3/4 Dynamic Dive (*Payakan* Pose)**: Displays the arched dorsal carapace, split crimson-lined lateral head scoop, and sweeping foreground scythe flipper. |
-| **`view: top`** | <img src="docs/view-top/tulkun.gif?v=4" width="360" alt="Top-Down Dorsal Swim" /> | **Dorsal Top-Down Swim**: Displays the full 10-limb wingspan (opercular fins, primary scythe wings, trailing *kuru* whips, pelvic paddles, and forked caudal flukes). |
+| **`view: side`**<br/>*(Default)* | <img src="docs/stage5-bull/tulkun.gif?v=5" width="360" alt="3D Rolling Swim Loop" /> | **3D Swim, Bank & Top-Down Roll Loop**: Smoothly transitions across a 72-frame (`4.8s`) cycle from **Lateral Side Profile** (hooked hammer-crest and jaw war-stripes) into a **3/4 Banking Dive** and a **Full Top-Down Dorsal Roll** (spreading all 10 limbs symmetrically) before banking back to side profile. |
+| **`view: dive`** | <img src="docs/view-dive/tulkun.gif?v=5" width="360" alt="3/4 Dynamic Dive" /> | **3/4 Dynamic Dive (*Payakan* Pose)**: Displays the arched dorsal carapace, split crimson-lined lateral head scoop, and sweeping foreground scythe flipper. |
+| **`view: top`** | <img src="docs/view-top/tulkun.gif?v=5" width="360" alt="Top-Down Dorsal Swim" /> | **Dorsal Top-Down Swim**: Locks the camera directly overhead to showcase the full 10-limb wingspan (opercular fins, primary scythe wings, trailing *kuru* whips, pelvic paddles, and forked caudal flukes). |
 
 ---
 
@@ -111,7 +111,7 @@ You can render your Tulkun from **3 camera angles** using the `view` input (`sid
 flowchart LR
     A["GitHub GraphQL API\n(Current-Year Contributions + Languages)"] --> B["TulkunBiology\n(Annual Stage, Spine Length, Crest & Fins)"]
     A --> C["TulkunCoat\n(Language Hex -> 4-Shade Dither Ramps)"]
-    B --> D["48-Frame 15 FPS Raycaster\n(3D Normals + 4x4 Bayer Dither)"]
+    B --> D["72-Frame 15 FPS 3D Raycaster\n(Roll + Dive + 4x4 Bayer Dither)"]
     C --> D
     D --> E["2x Nearest-Neighbor GIF\n(tulkun/tulkun.gif 640x280)"]
 ```
@@ -123,17 +123,17 @@ flowchart LR
      - **Tertiary Language (`#3`)**: Tints the sensor crest tip highlights.
    - To use the movie's canonical colors instead of repository language colors, set `canon: "true"` (or pass `--canon` on the CLI):
      <p align="center">
-       <img src="docs/canon-bull/tulkun.gif?v=4" width="420" alt="Canon Pandoran Tulkun Palette" />
+       <img src="docs/canon-bull/tulkun.gif?v=5" width="420" alt="Canon Pandoran Tulkun Palette" />
      </p>
 
 2. **3D Cylindrical Normal Lighting and `4x4` Ordered Bayer Dithering (`src/render.rs`)**:
-   - Each pixel across the spine and appendages computes a 3D surface normal $\vec{n} = (n_x, n_y, \sqrt{1 - n_x^2 - n_y^2})$ illuminated by a directional light vector `[-0.30, -0.62, 0.72]`.
+   - Each pixel across the spine and appendages computes a 3D surface normal $\vec{n} = (n_x, n_y, \sqrt{1 - n_x^2 - n_y^2})$ illuminated by a directional light vector `[-0.30, -0.62, 0.72]`, rotated continuously by the whale's barrel-roll angle $\phi(t)$.
    - Surface brightness is quantized across the 4-shade ramp using a `4x4` Bayer ordered dither matrix and bordered with a `1px` outline (`#0f121a`) for contrast on both light and dark GitHub themes.
 
-3. **Cetacean S-Wave Swimming Physics and Bottom-Left Metrics HUD**:
-   - **48-Frame Cetacean S-Wave (3.2s Loop at 15 FPS)**: A continuous traveling wave flexes through the mid-torso and drives a vertical propulsion stroke down the tail peduncle and dual flukes, while the 6 pectoral flippers scull with natural phase lag:
-     $$\Delta y(u, t) = A_{\text{bob}}\sin(\omega t)(1 - u)^{1.3} + A_{\text{tail}}\sin(2.35\pi u - \omega t)\,u^{0.92}$$
-   - **Full-Envelope Camera Stabilization**: The camera bounding box is pre-computed across the complete 8-phase stroke envelope so the whale's swimming motion never clips or bounces the viewport.
+3. **3D Rolling Maneuvers, Cetacean S-Wave Physics, and Bottom-Left Metrics HUD**:
+   - **72-Frame 3D Swim, Bank, and Roll Loop (4.8s at 15 FPS)**: Across each cycle, the Tulkun performs two complete S-wave tail strokes while smoothly rolling through **Lateral Side Cruise** $\rightarrow$ **3/4 Banking Dive** $\rightarrow$ **Top-Down Dorsal Roll** $\rightarrow$ **Side Recovery**, projecting all 10 bilateral limbs and rotating the ventral belly pleats, jaw war-stripes, amber eye, and dorsal carapace bands in 3D:
+     $$\Delta y(u, t) = A_{\text{bob}}\sin(2\omega t)(1 - u)^{1.3} + A_{\text{tail}}\sin(2.35\pi u - 2\omega t)\,u^{0.92} + A_{\text{dive}}(u, t)$$
+   - **Full-Envelope Camera Stabilization**: The camera bounding box is pre-computed across the complete 12-phase 3D roll and stroke envelope so the whale's wingspan and tail strokes never clip or bounce the viewport.
    - **Bottom-Left Pixel-Art Metrics HUD**: Every rendered image includes a `3x5` outlined pixel-art badge in the bottom-left corner displaying **`AVATAR: TULKEN`** and your current-year **`CONTRIBUTIONS: <count>`**.
 
 ---

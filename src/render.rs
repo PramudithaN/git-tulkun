@@ -13,8 +13,8 @@ pub const FRAME_WIDTH_PIXELS: u32 = 320;
 pub const FRAME_HEIGHT_PIXELS: u32 = 140;
 /// Animation frame rate (15 FPS).
 pub const FRAMES_PER_SECOND: u32 = 15;
-/// Total frames in one seamless deep-ocean swimming loop (75 frames = 5.0 seconds per slow cycle).
-pub const LOOP_FRAME_COUNT: u32 = 48;
+/// Total frames in one seamless deep-ocean swimming & 3D rolling loop (72 frames = 4.8 seconds at 15 FPS).
+pub const LOOP_FRAME_COUNT: u32 = 72;
 
 pub const OUTLINE_COLOR: [u8; 4] = [15, 18, 26, 255];
 
@@ -234,16 +234,51 @@ fn pt_node(x: f64, y: f64, r: f64, u: f64) -> SpineNode {
     }
 }
 
+/// Compute continuous 3D roll (`0.0` = lateral side profile, `1.0` = dorsal top-down view)
+/// and diving arch factor (`0.0` = level cruise, `1.0` = banked dive arch) for a given frame.
+fn compute_roll_and_dive(view: CameraView, loop_turn: f64) -> (f64, f64) {
+    match view {
+        CameraView::Top => (1.0, 0.0),
+        CameraView::Dive => (0.36, 1.0),
+        CameraView::Side => {
+            // Smoothly transition across the 72-frame loop:
+            //   0%..25%: Lateral Side Profile Cruise (roll_mix ~ 0.0)
+            //  25%..42%: 3/4 Banking Dive Arch (roll_mix ~ 0.45, dive_arch peaks)
+            //  42%..58%: Top-Down Dorsal Roll (roll_mix -> 1.0, all 10 limbs spread symmetrically)
+            //  58%..75%: 3/4 Banking Roll Recovery
+            //  75%..100%: Lateral Side Profile Cruise
+            let raw_roll = (0.5 - 0.5 * loop_turn.cos()).clamp(0.0, 1.0);
+            let roll_mix = smooth_step((raw_roll - 0.14) / 0.78);
+            let dive_arch = (loop_turn.sin().abs() * (1.0 - (roll_mix - 0.45).abs() * 1.8).max(0.0))
+                .clamp(0.0, 1.0);
+            (roll_mix, dive_arch)
+        }
+    }
+}
+
+fn lerp_node(a: SpineNode, b: SpineNode, t: f64) -> SpineNode {
+    let r_top = lerp(a.r_top, b.r_top, t);
+    let r_bot = lerp(a.r_bot, b.r_bot, t);
+    SpineNode {
+        x: lerp(a.x, b.x, t),
+        y: lerp(a.y, b.y, t),
+        r_top,
+        r_bot,
+        r: (r_top + r_bot) * 0.5,
+        u: lerp(a.u, b.u, t),
+    }
+}
+
 /// Render a single still frame of the Tulkun.
 pub fn render_still_frame(
     snapshot: &AccountSnapshot,
     coat: &TulkunCoat,
     view: CameraView,
 ) -> TulkunFrame {
-    render_swim_frame(snapshot, coat, view, 12)
+    render_swim_frame(snapshot, coat, view, 6)
 }
 
-/// Render frame `frame_index` (`0..LOOP_FRAME_COUNT`) of the Tulkun's seamless deep-ocean swimming loop.
+/// Render frame `frame_index` (`0..LOOP_FRAME_COUNT`) of the Tulkun's seamless deep-ocean swimming & 3D rolling loop.
 pub fn render_swim_frame(
     snapshot: &AccountSnapshot,
     coat: &TulkunCoat,
@@ -257,49 +292,49 @@ pub fn render_swim_frame(
     let effective_commits = snapshot.total_contributions.max(snapshot.monthly_contributions).max(1);
     let bio = TulkunBiology::from_commits(effective_commits);
 
-    // Seamless slow 5-second period phase in [0, TAU)
+    // Seamless 4.8-second period phase in [0, TAU)
     let loop_turn = TAU * f64::from(frame_index % LOOP_FRAME_COUNT) / f64::from(LOOP_FRAME_COUNT);
+    let (roll_mix, _dive_arch) = compute_roll_and_dive(view, loop_turn);
 
     let body_len = bio.body_len;
-    let max_radius = bio.max_radius;
     let n_pts = (body_len.round() as usize).max(36);
 
-    // Compute fixed reference bounding box at rest (loop_turn = 0) so the camera NEVER jitters or bounces!
-    let (rest_spine, rest_parts) = build_pose_geometry(&bio, view, 0.0, w, h);
+    // Compute fixed reference bounding box across the entire 3D maneuver cycle so the camera NEVER jitters or clips!
     let mut ref_min_x = f64::INFINITY;
     let mut ref_min_y = f64::INFINITY;
     let mut ref_max_x = f64::NEG_INFINITY;
     let mut ref_max_y = f64::NEG_INFINITY;
-    for step in 0..8 { let (s_spine, s_parts) = build_pose_geometry(&bio, view, TAU * (step as f64 / 8.0), w, h); for p in &s_spine { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0); ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0); } for part in &s_parts { for p in &part.pts { ref_min_x = ref_min_x.min(p.x - p.r - 4.0); ref_max_x = ref_max_x.max(p.x + p.r + 4.0); ref_min_y = ref_min_y.min(p.y - p.r - 4.0); ref_max_y = ref_max_y.max(p.y + p.r + 4.0); } } }
-
-    for p in &rest_spine {
-        ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
-        ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
-        ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0);
-        ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0);
-    }
-    for part in &rest_parts {
-        for p in &part.pts {
+    for step in 0..12 {
+        let (s_spine, s_parts) = build_pose_geometry(&bio, view, TAU * (step as f64 / 12.0), w, h);
+        for p in &s_spine {
             ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
             ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
-            ref_min_y = ref_min_y.min(p.y - p.r - 4.0);
-            ref_max_y = ref_max_y.max(p.y + p.r + 4.0);
+            ref_min_y = ref_min_y.min(p.y - p.r_top - 4.0);
+            ref_max_y = ref_max_y.max(p.y + p.r_bot + 4.0);
+        }
+        for part in &s_parts {
+            for p in &part.pts {
+                ref_min_x = ref_min_x.min(p.x - p.r - 4.0);
+                ref_max_x = ref_max_x.max(p.x + p.r + 4.0);
+                ref_min_y = ref_min_y.min(p.y - p.r - 4.0);
+                ref_max_y = ref_max_y.max(p.y + p.r + 4.0);
+            }
         }
     }
 
-    // Reserve bottom 24px for the bottom-left HUD metrics so the whale never overlaps the text
+    // Reserve bottom 22px for the bottom-left HUD metrics so the whale never overlaps the text
     let hud_reserved_bottom = 22.0;
     let avail_w = f64::from(w) - 16.0;
-    let avail_h = f64::from(h) - hud_reserved_bottom - 10.0;
+    let avail_h = f64::from(h) - hud_reserved_bottom - 8.0;
     let raw_w = (ref_max_x - ref_min_x).max(1.0);
     let raw_h = (ref_max_y - ref_min_y).max(1.0);
     let fit_scale = (avail_w / raw_w).min(avail_h / raw_h).min(1.0);
     let ref_cx = (ref_min_x + ref_max_x) * 0.5;
     let ref_cy = (ref_min_y + ref_max_y) * 0.5;
 
-    // Subtle, majestic deep-ocean glide drift (only 6px horizontal, 1.5px vertical)
+    // Subtle, majestic deep-ocean glide drift during the roll maneuver
     let glide_x = loop_turn.sin() * 5.0;
-    let glide_y = loop_turn.cos() * 2.5;
+    let glide_y = (loop_turn * 2.0).cos() * 2.2;
     let target_cx = f64::from(w) * 0.52 + glide_x;
     let target_cy = (f64::from(h) - hud_reserved_bottom) * 0.48 + glide_y;
 
@@ -344,6 +379,9 @@ pub fn render_swim_frame(
     }
 
     let light = [-0.30, -0.62, 0.72];
+    let phi = roll_mix * FRAC_PI_2;
+    let cos_phi = phi.cos();
+    let sin_phi = phi.sin();
 
     let shade_part = |part: &AppendagePart, s: &SampleHit, px: u32, py: u32| -> [u8; 4] {
         let is_rim = s.dist > s.active_r - 0.7 && s.active_r > 1.6;
@@ -410,15 +448,20 @@ pub fn render_swim_frame(
             }
 
             if let Some(b) = sample_chain(&spine, sx, sy) {
-                if view != CameraView::Top
+                // Bull crest hook gap in lateral/banking profile fades smoothly as the whale rolls to top-down
+                if roll_mix < 0.65
                     && bio.bull_phase > 0.35
                     && b.u > 0.08
                     && b.u < 0.18
                     && b.ny < -0.55
-                    && (b.u - 0.08) / 0.10 < 0.65 * bio.bull_phase
+                    && (b.u - 0.08) / 0.10 < 0.65 * bio.bull_phase * (1.0 - roll_mix)
                 {
                     continue;
                 }
+
+                let nz = (1.0 - (b.nx * b.nx + b.ny * b.ny)).max(0.0).sqrt();
+                // Rotate surface normal around the spine axis by `phi` so belly, jaw stripes, eye, and dorsal bands rotate in 3D
+                let local_ny = b.ny * cos_phi - nz * sin_phi * 0.85;
 
                 let mut ramp = if bio.maturity < 0.38 {
                     &coat.belly
@@ -426,53 +469,65 @@ pub fn render_swim_frame(
                     &coat.armor
                 };
 
-                if view == CameraView::Top {
-                    let band_noise = (b.u * 38.0 + b.lat_frac.abs() * 5.5).sin();
-                    if b.u < 0.18 && b.lat_frac.abs() < 0.62 && bio.female_phase > 0.25 {
-                        ramp = &coat.crest_core;
-                    } else if band_noise > (bio.maturity * 1.35 - 0.25) {
+                let is_ventral = local_ny > 0.12;
+                if is_ventral {
+                    ramp = if bio.maturity < 0.55 || b.u < 0.35 {
+                        &coat.cream
+                    } else {
+                        &coat.belly
+                    };
+                }
+
+                // Sensor crest (dorsal snout in side view -> wide medial plate in top-down view)
+                let on_side_crest = b.u < 0.18 && local_ny < -0.38;
+                let on_top_crest = roll_mix > 0.35
+                    && b.u < 0.18
+                    && b.lat_frac.abs() < lerp(0.85, 0.62, roll_mix)
+                    && (bio.female_phase > 0.20 || b.ny < 0.15);
+                if on_side_crest || on_top_crest {
+                    ramp = if bio.female_phase > 0.3 && bio.bull_phase < 0.4 && b.u < 0.04 {
+                        &coat.crest_tip
+                    } else {
+                        &coat.crest_core
+                    };
+                }
+
+                // Jaw war-paint triangles rotate underneath as the whale rolls onto its back
+                if roll_mix < 0.82 && b.u > 0.03 && b.u < 0.22 && local_ny > -0.15 && local_ny < 0.68 {
+                    let tooth = ((b.u - 0.03) * bio.jaw_tooth_count * 32.0).sin();
+                    ramp = if local_ny > 0.15 + tooth.max(0.0) * 0.32 {
+                        &coat.cream
+                    } else if bio.maturity < 0.38 {
+                        &coat.belly
+                    } else {
+                        &coat.armor
+                    };
+                }
+
+                // Dorsal swirling war-stripes blend into transverse top-down carapace bands during the roll
+                if !is_ventral && b.u > 0.18 {
+                    let side_swirl = (b.u * 34.0 - local_ny * 5.0).sin()
+                        + 0.5 * (b.u * 19.0 + local_ny * 7.0).cos();
+                    let top_band = (b.u * 38.0 + b.lat_frac.abs() * 5.5).sin() * 1.35;
+                    let pattern_val = lerp(side_swirl, top_band, roll_mix);
+                    let threshold = lerp(
+                        lerp(0.15, 1.18, bio.maturity),
+                        lerp(-0.15, 1.10, bio.maturity),
+                        roll_mix,
+                    );
+                    if pattern_val > threshold {
                         ramp = &coat.cream;
                     }
-                } else {
-                    let is_ventral = b.ny > 0.12;
-                    if is_ventral {
-                        ramp = if bio.maturity < 0.55 || b.u < 0.35 {
-                            &coat.cream
-                        } else {
-                            &coat.belly
-                        };
-                    }
-                    if b.u < 0.18 && b.ny < -0.38 {
-                        ramp = if bio.female_phase > 0.3 && bio.bull_phase < 0.4 && b.u < 0.04 {
-                            &coat.crest_tip
-                        } else {
-                            &coat.crest_core
-                        };
-                    }
-                    if b.u > 0.03 && b.u < 0.22 && b.ny > -0.15 && b.ny < 0.68 {
-                        let tooth = ((b.u - 0.03) * bio.jaw_tooth_count * 32.0).sin();
-                        ramp = if b.ny > 0.15 + tooth.max(0.0) * 0.32 {
-                            &coat.cream
-                        } else if bio.maturity < 0.38 {
-                            &coat.belly
-                        } else {
-                            &coat.armor
-                        };
-                    }
-                    if !is_ventral && b.u > 0.18 {
-                        let swirl =
-                            (b.u * 34.0 - b.ny * 5.0).sin() + 0.5 * (b.u * 19.0 + b.ny * 7.0).cos();
-                        let threshold = lerp(0.15, 1.18, bio.maturity);
-                        if swirl > threshold {
-                            ramp = &coat.cream;
-                        }
-                    }
-                    if (b.u - 0.185).abs() * body_len * fit_scale < 2.2
-                        && (b.ny - 0.02).abs() * b.active_r < 2.2
-                    {
-                        rgba_pixels[p_idx] = [240, 175, 95, 255];
-                        continue;
-                    }
+                }
+
+                // Amber eye rotates upward toward the dorsal horizon as the whale banks into the roll
+                let eye_ny = 0.02 * cos_phi - 0.68 * sin_phi;
+                if roll_mix < 0.72
+                    && (b.u - 0.185).abs() * body_len * fit_scale < 2.2
+                    && (b.ny - eye_ny).abs() * b.active_r < 2.2
+                {
+                    rgba_pixels[p_idx] = [240, 175, 95, 255];
+                    continue;
                 }
 
                 if b.dist > b.active_r - 0.8 {
@@ -480,12 +535,11 @@ pub fn render_swim_frame(
                     continue;
                 }
 
-                let nz = (1.0 - (b.nx * b.nx + b.ny * b.ny)).max(0.0).sqrt();
                 let mut bright =
                     0.24 + 0.74 * (b.nx * light[0] + b.ny * light[1] + nz * light[2]).max(0.0);
 
-                if b.ny > 0.2 && b.u > 0.45 && b.u < 0.85 && (b.u * 65.0).sin() > 0.62 {
-                    bright -= 0.22;
+                if local_ny > 0.2 && b.u > 0.45 && b.u < 0.85 && (b.u * 65.0).sin() > 0.62 {
+                    bright -= 0.22 * (1.0 - roll_mix);
                 }
 
                 rgba_pixels[p_idx] = choose_shade(ramp, bright, px as u32, py as u32);
@@ -520,17 +574,15 @@ pub fn render_swim_frame(
         }
     }
 
-    // Paint subtle drifting deep-ocean bioluminescent plankton motes
-    // Removed background dots around creature as requested
-
-    // Paint Bottom-Left Pixel-Art Metrics HUD: "NAME: TULKEN" & "CONTRIBUTIONS: <count>"
+    // Paint Bottom-Left Pixel-Art Metrics HUD: "AVATAR: TULKEN" & "CONTRIBUTIONS: <count>"
     paint_metrics_hud(&mut rgba_pixels, w, h, effective_commits, coat);
 
     let _ = n_pts;
     TulkunFrame { rgba_pixels }
 }
 
-/// Build the spine and appendages for a given `loop_turn` phase (`0..TAU`) with realistic, gentle deep-sea motion.
+/// Build the spine and appendages for a given `loop_turn` phase (`0..TAU`) with continuous 3D roll,
+/// diving bank arch, and two complete cetacean S-wave propulsion cycles per loop.
 fn build_pose_geometry(
     bio: &TulkunBiology,
     view: CameraView,
@@ -543,35 +595,42 @@ fn build_pose_geometry(
     let n_pts = (body_len.round() as usize).max(36);
     let mut spine = Vec::with_capacity(n_pts);
 
+    let (roll_mix, dive_arch) = compute_roll_and_dive(view, loop_turn);
+    // Two full S-wave swimming propulsion cycles per 72-frame (4.8s) 3D maneuver loop
+    let swim_phase = if view == CameraView::Side {
+        loop_turn * 2.0
+    } else {
+        loop_turn
+    };
+
     let dir = if view == CameraView::Dive { 1.0 } else { -1.0 };
     let start_x = f64::from(w) * 0.50 + dir * (body_len * 0.42);
     let center_y = f64::from(h) * 0.44;
 
-    // Realistic, slow, heavy cetacean physics (single 1x harmonic per 75-frame cycle, ~75% lower amplitude!)
-    let pitch_angle = loop_turn.cos() * 0.065;
-    let wave_amp = max_radius * 0.62;
+    let pitch_angle = swim_phase.cos() * 0.065;
+    let wave_amp = max_radius * lerp(0.62, 0.38, roll_mix * 0.65);
 
     for i in 0..n_pts {
         let u = i as f64 / (n_pts - 1) as f64;
         let x = start_x - dir * (u * body_len);
 
-        // Heavy head stays steady; smooth single-harmonic traveling wave glides down the tail stock
-        let head_bob = loop_turn.sin() * (max_radius * 0.14) * (1.0 - u).powf(1.3);
-        let tail_stroke = (u * PI * 2.35 - loop_turn).sin() * wave_amp * u.powf(0.92);
+        // Heavy head stays steady; smooth traveling S-wave glides down the tail stock
+        let head_bob = swim_phase.sin() * (max_radius * 0.14) * (1.0 - u).powf(1.3);
+        let tail_stroke = (u * PI * 2.35 - swim_phase).sin() * wave_amp * u.powf(0.92);
         let pitch_offset = (u - 0.35) * body_len * pitch_angle.sin();
 
         let mut y = center_y + head_bob + tail_stroke + pitch_offset;
-        if view == CameraView::Dive {
-            let arch = -(u * PI * 0.92).sin() * (max_radius * 1.05)
+        if dive_arch > 0.01 {
+            let arch = -(u * PI * 0.92).sin() * (max_radius * 0.78)
                 + if u < 0.45 {
-                    ((0.45 - u) / 0.45).powf(1.4) * (max_radius * 0.70)
+                    ((0.45 - u) / 0.45).powf(1.4) * (max_radius * 0.52)
                 } else {
                     0.0
                 };
-            y += arch;
+            y += arch * dive_arch;
         }
 
-        let (mut r_top, r_bot) = if u < 0.24 {
+        let (mut r_top, mut r_bot) = if u < 0.24 {
             let hu = u / 0.24;
             let base_top = max_radius * lerp(0.38, 0.92, hu.powf(0.55));
             let calf_bump = (hu * PI).sin() * (max_radius * 0.16);
@@ -583,15 +642,16 @@ fn build_pose_geometry(
             } else {
                 (((1.0 - hu) / 0.55).max(0.0)).powf(1.6) * (max_radius * 0.75)
             };
-            let crest_add = if view == CameraView::Top {
-                0.0
-            } else {
-                calf_bump * (1.0 - bio.female_phase)
-                    + fem_wedge * bio.female_phase * (1.0 - bio.bull_phase * 0.4)
-                    + bull_crest * bio.bull_phase
-            };
+            let crest_add = (calf_bump * (1.0 - bio.female_phase)
+                + fem_wedge * bio.female_phase * (1.0 - bio.bull_phase * 0.4)
+                + bull_crest * bio.bull_phase)
+                * (1.0 - roll_mix);
             let bot = max_radius * lerp(0.32, 0.96, ((hu * 1.3).min(1.0) * FRAC_PI_2).sin());
-            (base_top + crest_add, bot)
+            let top_sym = lerp(base_top, bot, 0.5);
+            (
+                lerp(base_top + crest_add, top_sym, roll_mix),
+                lerp(bot, top_sym, roll_mix),
+            )
         } else if u < 0.68 {
             let mu = (u - 0.24) / 0.44;
             let env = (mu * PI * 0.48).cos();
@@ -603,7 +663,7 @@ fn build_pose_geometry(
         };
 
         r_top = r_top.max(1.2);
-        let r_bot = r_bot.max(1.2);
+        r_bot = r_bot.max(1.2);
         spine.push(SpineNode {
             x,
             y,
@@ -621,299 +681,440 @@ fn build_pose_geometry(
 
     let mut parts = Vec::new();
     let fin_scale = bio.fin_stubbiness;
-    // Slow, graceful deep-ocean fin sculling (1x loop_turn instead of 2x, gentle amplitude)
-    let wing_flap = (loop_turn - 0.65).sin() * (max_radius * 0.78);
-    let aux_flap = (loop_turn - 0.95).cos() * (max_radius * 0.42);
-    let fluke_whip = (loop_turn - 2.05).cos() * (max_radius * 0.72);
+    let wing_flap = (swim_phase - 0.65).sin() * (max_radius * 0.78);
+    let aux_flap = (swim_phase - 0.95).cos() * (max_radius * 0.42);
+    let fluke_whip = (swim_phase - 2.05).cos() * (max_radius * 0.72);
 
-    if view == CameraView::Top {
-        for side in [-1.0, 1.0] {
-            let op_root = get_pt(0.23);
-            let op_len = max_radius * 1.35 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Opercular,
-                pts: vec![
-                    pt_node(op_root.x, op_root.y + side * op_root.r * 0.75, max_radius * 0.26, 0.0),
-                    pt_node(
-                        op_root.x - dir * (op_len * 0.45 + aux_flap * 0.3),
-                        op_root.y + side * (op_root.r * 0.75 + op_len * 0.85),
-                        max_radius * 0.22,
-                        0.5,
-                    ),
-                    pt_node(
-                        op_root.x - dir * (op_len * 0.75 + aux_flap * 0.6),
-                        op_root.y + side * (op_root.r * 0.75 + op_len * 1.15),
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
+    // --- 1. Opercular Head Fins (Near / Right & Far / Left) ---
+    let op_root = get_pt(0.24);
+    let op_side_len = max_radius * 1.15 * fin_scale;
+    let op_top_len = max_radius * 1.18 * fin_scale;
+    let op_near_side = [
+        pt_node(op_root.x, op_root.y + op_root.r_bot * 0.35, max_radius * 0.28, 0.0),
+        pt_node(
+            op_root.x - dir * op_side_len * 0.35,
+            op_root.y + op_root.r_bot * 0.35 + op_side_len * 0.65 + aux_flap * 0.5,
+            max_radius * 0.22,
+            0.5,
+        ),
+        pt_node(
+            op_root.x - dir * op_side_len * 0.55,
+            op_root.y + op_root.r_bot * 0.35 + op_side_len * 0.95 + aux_flap,
+            1.1,
+            1.0,
+        ),
+    ];
+    let op_near_top = [
+        pt_node(op_root.x, op_root.y + op_root.r * 0.75, max_radius * 0.26, 0.0),
+        pt_node(
+            op_root.x - dir * (op_top_len * 0.45 + aux_flap * 0.3),
+            op_root.y + op_root.r * 0.75 + op_top_len * 0.80,
+            max_radius * 0.22,
+            0.5,
+        ),
+        pt_node(
+            op_root.x - dir * (op_top_len * 0.75 + aux_flap * 0.6),
+            op_root.y + op_root.r * 0.75 + op_top_len * 1.08,
+            1.0,
+            1.0,
+        ),
+    ];
+    parts.push(AppendagePart {
+        z: 3,
+        kind: PartKind::Opercular,
+        pts: (0..3)
+            .map(|i| lerp_node(op_near_side[i], op_near_top[i], roll_mix))
+            .collect(),
+    });
 
-            let main_root = get_pt(0.38);
-            let main_len = max_radius * 3.45 * fin_scale;
-            parts.push(AppendagePart {
-                z: 3,
-                kind: PartKind::MainWing,
-                pts: vec![
-                    pt_node(main_root.x, main_root.y + side * main_root.r * 0.75, max_radius * 0.42, 0.0),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.28 + wing_flap * 0.3),
-                        main_root.y + side * (main_root.r + main_len * 0.52),
-                        max_radius * 0.36,
-                        0.33,
-                    ),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.68 + wing_flap * 0.7),
-                        main_root.y + side * (main_root.r + main_len * 0.96),
-                        max_radius * 0.22,
-                        0.66,
-                    ),
-                    pt_node(
-                        main_root.x - dir * (main_len * 0.98 + wing_flap * 1.1),
-                        main_root.y + side * (main_root.r + main_len * 1.18),
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-
-            if bio.kuru_scale > 0.05 {
-                let k_len = max_radius * 2.6 * bio.kuru_scale;
-                parts.push(AppendagePart {
-                    z: 1,
-                    kind: PartKind::Kuru,
-                    pts: vec![
-                        pt_node(op_root.x - dir * 4.0, op_root.y + side * op_root.r * 0.9, 1.2, 0.0),
-                        pt_node(
-                            op_root.x - dir * k_len * 0.6,
-                            op_root.y + side * (op_root.r * 1.15 + k_len * 0.22 + aux_flap * 0.4),
-                            0.95,
-                            0.5,
-                        ),
-                        pt_node(
-                            op_root.x - dir * k_len * 1.15,
-                            op_root.y + side * (op_root.r * 1.05 + k_len * 0.15 - aux_flap * 0.5),
-                            0.75,
-                            1.0,
-                        ),
-                    ],
-                });
-            }
-
-            let pelv_root = get_pt(0.82);
-            let p_len = max_radius * 1.15 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Fluke,
-                pts: vec![
-                    pt_node(pelv_root.x, pelv_root.y + side * pelv_root.r * 0.6, max_radius * 0.22, 0.0),
-                    pt_node(
-                        pelv_root.x - dir * p_len * 0.65,
-                        pelv_root.y + side * (pelv_root.r + p_len * 0.75),
-                        max_radius * 0.28,
-                        0.5,
-                    ),
-                    pt_node(
-                        pelv_root.x - dir * p_len * 1.0,
-                        pelv_root.y + side * (pelv_root.r + p_len * 0.95),
-                        1.1,
-                        1.0,
-                    ),
-                ],
-            });
-
-            let c_root = get_pt(0.96);
-            let c_len = max_radius * 2.15 * fin_scale;
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Fluke,
-                pts: vec![
-                    pt_node(c_root.x, c_root.y + side * 1.5, max_radius * 0.26, 0.0),
-                    pt_node(
-                        c_root.x - dir * c_len * 0.55,
-                        c_root.y + side * c_len * 0.48 + fluke_whip * 0.3,
-                        max_radius * 0.34,
-                        0.5,
-                    ),
-                    pt_node(
-                        c_root.x - dir * c_len * 1.05,
-                        c_root.y + side * c_len * 0.72 + fluke_whip * 0.6,
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-        }
-    } else {
-        let op_root = get_pt(0.24);
-        let op_len = max_radius * 1.15 * fin_scale;
+    if roll_mix > 0.18 {
+        let far_op_t = ((roll_mix - 0.18) / 0.82).clamp(0.0, 1.0);
+        let op_far_hidden = [
+            pt_node(op_root.x, op_root.y - op_root.r_top * 0.35, max_radius * 0.20, 0.0),
+            pt_node(op_root.x - dir * op_top_len * 0.35, op_root.y - op_root.r_top * 0.45, max_radius * 0.16, 0.5),
+            pt_node(op_root.x - dir * op_top_len * 0.60, op_root.y - op_root.r_top * 0.50, 0.9, 1.0),
+        ];
+        let op_far_top = [
+            pt_node(op_root.x, op_root.y - op_root.r * 0.75, max_radius * 0.26, 0.0),
+            pt_node(
+                op_root.x - dir * (op_top_len * 0.45 + aux_flap * 0.3),
+                op_root.y - (op_root.r * 0.75 + op_top_len * 0.80),
+                max_radius * 0.22,
+                0.5,
+            ),
+            pt_node(
+                op_root.x - dir * (op_top_len * 0.75 + aux_flap * 0.6),
+                op_root.y - (op_root.r * 0.75 + op_top_len * 1.08),
+                1.0,
+                1.0,
+            ),
+        ];
         parts.push(AppendagePart {
-            z: 3,
+            z: if roll_mix > 0.45 { 2 } else { -2 },
             kind: PartKind::Opercular,
-            pts: vec![
-                pt_node(op_root.x, op_root.y + op_root.r_bot * 0.35, max_radius * 0.28, 0.0),
-                pt_node(
-                    op_root.x - dir * op_len * 0.35,
-                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.65 + aux_flap * 0.5,
-                    max_radius * 0.22,
-                    0.5,
-                ),
-                pt_node(
-                    op_root.x - dir * op_len * 0.55,
-                    op_root.y + op_root.r_bot * 0.35 + op_len * 0.95 + aux_flap,
-                    1.1,
-                    1.0,
-                ),
-            ],
+            pts: (0..3)
+                .map(|i| lerp_node(op_far_hidden[i], op_far_top[i], far_op_t))
+                .collect(),
         });
+    }
 
-        if bio.kuru_scale > 0.05 {
-            let k_end = get_pt(0.44);
-            parts.push(AppendagePart {
-                z: 2,
-                kind: PartKind::Kuru,
-                pts: vec![
-                    pt_node(op_root.x - dir * 3.0, op_root.y + op_root.r_bot * 0.85, 1.2, 0.0),
-                    pt_node(
-                        (op_root.x + k_end.x) * 0.5,
-                        op_root.y + op_root.r_bot * 1.25 + 3.0 + aux_flap * 0.6,
-                        1.0,
-                        0.5,
-                    ),
-                    pt_node(k_end.x, k_end.y + k_end.r_bot * 0.75, 0.9, 1.0),
-                ],
-            });
-        }
-
-        let main_root = get_pt(0.38);
-        let wing_len = max_radius * 3.55 * fin_scale;
-        parts.push(AppendagePart {
-            z: 4,
-            kind: PartKind::MainWing,
-            pts: vec![
-                pt_node(main_root.x, main_root.y + main_root.r_bot * 0.22, max_radius * 0.42, 0.0),
-                pt_node(
-                    main_root.x - dir * wing_len * 0.36,
-                    main_root.y + wing_len * 0.28 + wing_flap * 0.35,
-                    max_radius * 0.36,
-                    0.33,
-                ),
-                pt_node(
-                    main_root.x - dir * wing_len * 0.72,
-                    main_root.y + wing_len * 0.54 + wing_flap * 0.75,
-                    max_radius * 0.24,
-                    0.66,
-                ),
-                pt_node(
-                    main_root.x - dir * wing_len * 1.02,
-                    main_root.y + wing_len * 0.72 + wing_flap * 1.15,
-                    1.1,
-                    1.0,
-                ),
-            ],
-        });
-
-        if bio.maturity > 0.22 {
-            let v_root = get_pt(0.45);
-            let v_len = max_radius * 1.85 * fin_scale * bio.maturity;
-            parts.push(AppendagePart {
-                z: -2,
-                kind: PartKind::AuxFlipper,
-                pts: vec![
-                    pt_node(v_root.x, v_root.y + v_root.r_bot * 0.75, max_radius * 0.30, 0.0),
-                    pt_node(
-                        v_root.x - dir * (v_len * 0.12 - aux_flap * 0.3),
-                        v_root.y + v_root.r_bot * 0.75 + v_len * 0.65,
-                        max_radius * 0.22,
-                        0.5,
-                    ),
-                    pt_node(
-                        v_root.x - dir * (v_len * 0.24 - aux_flap * 0.6),
-                        v_root.y + v_root.r_bot * 0.75 + v_len * 1.02,
-                        1.0,
-                        1.0,
-                    ),
-                ],
-            });
-        }
-
-        let pelv_root = get_pt(0.82);
-        let p_scale = max_radius * 1.10 * fin_scale;
-        parts.push(AppendagePart {
-            z: -1,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(pelv_root.x, pelv_root.y + pelv_root.r_bot * 0.6, p_scale * 0.24, 0.0),
-                pt_node(
-                    pelv_root.x - dir * p_scale * 0.55,
-                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.45 + fluke_whip * 0.4,
-                    p_scale * 0.32,
-                    0.5,
-                ),
-                pt_node(
-                    pelv_root.x - dir * p_scale * 0.85,
-                    pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.62 + fluke_whip * 0.7,
-                    1.1,
-                    1.0,
-                ),
-            ],
-        });
-
-        let tail_root = get_pt(0.96);
-        let f_len = max_radius * 2.20 * fin_scale;
-        parts.push(AppendagePart {
-            z: -1,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(tail_root.x, tail_root.y, tail_root.r * 0.9, 0.0),
-                pt_node(
-                    tail_root.x - dir * f_len * 0.55,
-                    tail_root.y - f_len * 0.14 + fluke_whip * 0.5,
-                    max_radius * 0.25,
-                    0.5,
-                ),
-                pt_node(
-                    tail_root.x - dir * f_len * 0.98,
-                    tail_root.y - f_len * 0.20 + fluke_whip,
-                    0.9,
-                    1.0,
-                ),
-            ],
-        });
+    // --- 2. Kuru Neural Whips (Near / Right & Far / Left) ---
+    if bio.kuru_scale > 0.05 {
+        let k_end = get_pt(0.44);
+        let k_len = max_radius * 2.4 * bio.kuru_scale;
+        let kuru_near_side = [
+            pt_node(op_root.x - dir * 3.0, op_root.y + op_root.r_bot * 0.85, 1.2, 0.0),
+            pt_node(
+                (op_root.x + k_end.x) * 0.5,
+                op_root.y + op_root.r_bot * 1.25 + 3.0 + aux_flap * 0.6,
+                1.0,
+                0.5,
+            ),
+            pt_node(k_end.x, k_end.y + k_end.r_bot * 0.75, 0.9, 1.0),
+        ];
+        let kuru_near_top = [
+            pt_node(op_root.x - dir * 4.0, op_root.y + op_root.r * 0.9, 1.2, 0.0),
+            pt_node(
+                op_root.x - dir * k_len * 0.6,
+                op_root.y + op_root.r * 1.12 + k_len * 0.20 + aux_flap * 0.4,
+                0.95,
+                0.5,
+            ),
+            pt_node(
+                op_root.x - dir * k_len * 1.15,
+                op_root.y + op_root.r * 1.02 + k_len * 0.14 - aux_flap * 0.5,
+                0.75,
+                1.0,
+            ),
+        ];
         parts.push(AppendagePart {
             z: 2,
-            kind: PartKind::Fluke,
-            pts: vec![
-                pt_node(tail_root.x, tail_root.y + 1.0, tail_root.r * 0.95, 0.0),
+            kind: PartKind::Kuru,
+            pts: (0..3)
+                .map(|i| lerp_node(kuru_near_side[i], kuru_near_top[i], roll_mix))
+                .collect(),
+        });
+
+        if roll_mix > 0.25 {
+            let far_k_t = ((roll_mix - 0.25) / 0.75).clamp(0.0, 1.0);
+            let kuru_far_hidden = [
+                pt_node(op_root.x - dir * 4.0, op_root.y - op_root.r_top * 0.5, 1.0, 0.0),
+                pt_node(op_root.x - dir * k_len * 0.5, op_root.y - op_root.r_top * 0.6, 0.85, 0.5),
+                pt_node(op_root.x - dir * k_len * 0.9, op_root.y - op_root.r_top * 0.5, 0.7, 1.0),
+            ];
+            let kuru_far_top = [
+                pt_node(op_root.x - dir * 4.0, op_root.y - op_root.r * 0.9, 1.2, 0.0),
                 pt_node(
-                    tail_root.x - dir * f_len * 0.50,
-                    tail_root.y + f_len * 0.16 + fluke_whip * 0.5,
-                    max_radius * 0.28,
+                    op_root.x - dir * k_len * 0.6,
+                    op_root.y - (op_root.r * 1.12 + k_len * 0.20 + aux_flap * 0.4),
+                    0.95,
                     0.5,
                 ),
                 pt_node(
-                    tail_root.x - dir * f_len * 1.05,
-                    tail_root.y + f_len * 0.32 + fluke_whip,
-                    0.9,
+                    op_root.x - dir * k_len * 1.15,
+                    op_root.y - (op_root.r * 1.02 + k_len * 0.14 - aux_flap * 0.5),
+                    0.75,
+                    1.0,
+                ),
+            ];
+            parts.push(AppendagePart {
+                z: if roll_mix > 0.50 { 1 } else { -2 },
+                kind: PartKind::Kuru,
+                pts: (0..3)
+                    .map(|i| lerp_node(kuru_far_hidden[i], kuru_far_top[i], far_k_t))
+                    .collect(),
+            });
+        }
+    }
+
+    // --- 3. Giant Pectoral Scythe-Wings (Near / Right & Far / Left) ---
+    let main_root = get_pt(0.38);
+    let wing_side_len = max_radius * 3.45 * fin_scale;
+    let wing_top_len = max_radius * 2.55 * fin_scale;
+    let wing_near_side = [
+        pt_node(main_root.x, main_root.y + main_root.r_bot * 0.22, max_radius * 0.42, 0.0),
+        pt_node(
+            main_root.x - dir * wing_side_len * 0.36,
+            main_root.y + wing_side_len * 0.28 + wing_flap * 0.35,
+            max_radius * 0.36,
+            0.33,
+        ),
+        pt_node(
+            main_root.x - dir * wing_side_len * 0.72,
+            main_root.y + wing_side_len * 0.54 + wing_flap * 0.75,
+            max_radius * 0.24,
+            0.66,
+        ),
+        pt_node(
+            main_root.x - dir * wing_side_len * 1.02,
+            main_root.y + wing_side_len * 0.72 + wing_flap * 1.15,
+            1.1,
+            1.0,
+        ),
+    ];
+    let wing_near_top = [
+        pt_node(main_root.x, main_root.y + main_root.r * 0.75, max_radius * 0.42, 0.0),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.28 + wing_flap * 0.25),
+            main_root.y + main_root.r + wing_top_len * 0.48,
+            max_radius * 0.36,
+            0.33,
+        ),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.68 + wing_flap * 0.55),
+            main_root.y + main_root.r + wing_top_len * 0.88,
+            max_radius * 0.22,
+            0.66,
+        ),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.98 + wing_flap * 0.85),
+            main_root.y + main_root.r + wing_top_len * 1.08,
+            1.0,
+            1.0,
+        ),
+    ];
+    parts.push(AppendagePart {
+        z: 4,
+        kind: PartKind::MainWing,
+        pts: (0..4)
+            .map(|i| lerp_node(wing_near_side[i], wing_near_top[i], roll_mix))
+            .collect(),
+    });
+
+    // Far / Left Pectoral Wing: in Side view it peeks beneath the chest (`z = -2`),
+    // and as the whale rolls to Top-Down it sweeps up across the dorsal side into full symmetry (`z = 3`)!
+    let v_root = get_pt(0.44);
+    let v_len = max_radius * 1.75 * fin_scale * bio.maturity.max(0.35);
+    let wing_far_side = [
+        pt_node(v_root.x, v_root.y + v_root.r_bot * 0.65, max_radius * 0.30, 0.0),
+        pt_node(
+            v_root.x - dir * (v_len * 0.15 - aux_flap * 0.2),
+            v_root.y + v_root.r_bot * 0.65 + v_len * 0.45,
+            max_radius * 0.24,
+            0.33,
+        ),
+        pt_node(
+            v_root.x - dir * (v_len * 0.25 - aux_flap * 0.4),
+            v_root.y + v_root.r_bot * 0.65 + v_len * 0.78,
+            max_radius * 0.18,
+            0.66,
+        ),
+        pt_node(
+            v_root.x - dir * (v_len * 0.35 - aux_flap * 0.6),
+            v_root.y + v_root.r_bot * 0.65 + v_len * 0.98,
+            1.0,
+            1.0,
+        ),
+    ];
+    let wing_far_top = [
+        pt_node(main_root.x, main_root.y - main_root.r * 0.75, max_radius * 0.42, 0.0),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.28 + wing_flap * 0.25),
+            main_root.y - (main_root.r + wing_top_len * 0.48),
+            max_radius * 0.36,
+            0.33,
+        ),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.68 + wing_flap * 0.55),
+            main_root.y - (main_root.r + wing_top_len * 0.88),
+            max_radius * 0.22,
+            0.66,
+        ),
+        pt_node(
+            main_root.x - dir * (wing_top_len * 0.98 + wing_flap * 0.85),
+            main_root.y - (main_root.r + wing_top_len * 1.08),
+            1.0,
+            1.0,
+        ),
+    ];
+    if bio.maturity > 0.22 || roll_mix > 0.20 {
+        parts.push(AppendagePart {
+            z: if roll_mix > 0.42 { 3 } else { -2 },
+            kind: if roll_mix > 0.35 {
+                PartKind::MainWing
+            } else {
+                PartKind::AuxFlipper
+            },
+            pts: (0..4)
+                .map(|i| lerp_node(wing_far_side[i], wing_far_top[i], roll_mix))
+                .collect(),
+        });
+    }
+
+    // --- 4. Pelvic Paddles (Near / Right & Far / Left) ---
+    let pelv_root = get_pt(0.82);
+    let p_scale = max_radius * 1.08 * fin_scale;
+    let pelv_near_side = [
+        pt_node(pelv_root.x, pelv_root.y + pelv_root.r_bot * 0.6, p_scale * 0.24, 0.0),
+        pt_node(
+            pelv_root.x - dir * p_scale * 0.55,
+            pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.45 + fluke_whip * 0.4,
+            p_scale * 0.32,
+            0.5,
+        ),
+        pt_node(
+            pelv_root.x - dir * p_scale * 0.85,
+            pelv_root.y + pelv_root.r_bot * 0.7 + p_scale * 0.62 + fluke_whip * 0.7,
+            1.1,
+            1.0,
+        ),
+    ];
+    let pelv_near_top = [
+        pt_node(pelv_root.x, pelv_root.y + pelv_root.r * 0.6, max_radius * 0.22, 0.0),
+        pt_node(
+            pelv_root.x - dir * p_scale * 0.65,
+            pelv_root.y + pelv_root.r + p_scale * 0.72,
+            max_radius * 0.28,
+            0.5,
+        ),
+        pt_node(
+            pelv_root.x - dir * p_scale * 1.0,
+            pelv_root.y + pelv_root.r + p_scale * 0.92,
+            1.1,
+            1.0,
+        ),
+    ];
+    parts.push(AppendagePart {
+        z: if roll_mix > 0.40 { 2 } else { -1 },
+        kind: PartKind::Fluke,
+        pts: (0..3)
+            .map(|i| lerp_node(pelv_near_side[i], pelv_near_top[i], roll_mix))
+            .collect(),
+    });
+
+    if roll_mix > 0.22 {
+        let far_p_t = ((roll_mix - 0.22) / 0.78).clamp(0.0, 1.0);
+        let pelv_far_hidden = [
+            pt_node(pelv_root.x, pelv_root.y - pelv_root.r_top * 0.4, max_radius * 0.18, 0.0),
+            pt_node(pelv_root.x - dir * p_scale * 0.45, pelv_root.y - pelv_root.r_top * 0.5, max_radius * 0.20, 0.5),
+            pt_node(pelv_root.x - dir * p_scale * 0.75, pelv_root.y - pelv_root.r_top * 0.55, 0.9, 1.0),
+        ];
+        let pelv_far_top = [
+            pt_node(pelv_root.x, pelv_root.y - pelv_root.r * 0.6, max_radius * 0.22, 0.0),
+            pt_node(
+                pelv_root.x - dir * p_scale * 0.65,
+                pelv_root.y - (pelv_root.r + p_scale * 0.72),
+                max_radius * 0.28,
+                0.5,
+            ),
+            pt_node(
+                pelv_root.x - dir * p_scale * 1.0,
+                pelv_root.y - (pelv_root.r + p_scale * 0.92),
+                1.1,
+                1.0,
+            ),
+        ];
+        parts.push(AppendagePart {
+            z: if roll_mix > 0.45 { 2 } else { -1 },
+            kind: PartKind::Fluke,
+            pts: (0..3)
+                .map(|i| lerp_node(pelv_far_hidden[i], pelv_far_top[i], far_p_t))
+                .collect(),
+        });
+    }
+
+    // --- 5. Forked Caudal Tail Flukes (Upper / Left & Lower / Right) ---
+    let tail_root = get_pt(0.96);
+    let f_len = max_radius * 2.15 * fin_scale;
+    let fluke_upper_side = [
+        pt_node(tail_root.x, tail_root.y, tail_root.r * 0.9, 0.0),
+        pt_node(
+            tail_root.x - dir * f_len * 0.55,
+            tail_root.y - f_len * 0.14 + fluke_whip * 0.5,
+            max_radius * 0.25,
+            0.5,
+        ),
+        pt_node(
+            tail_root.x - dir * f_len * 0.98,
+            tail_root.y - f_len * 0.20 + fluke_whip,
+            0.9,
+            1.0,
+        ),
+    ];
+    let fluke_upper_top = [
+        pt_node(tail_root.x, tail_root.y - 1.5, max_radius * 0.26, 0.0),
+        pt_node(
+            tail_root.x - dir * f_len * 0.55,
+            tail_root.y - f_len * 0.46 + fluke_whip * 0.25,
+            max_radius * 0.34,
+            0.5,
+        ),
+        pt_node(
+            tail_root.x - dir * f_len * 1.05,
+            tail_root.y - f_len * 0.68 + fluke_whip * 0.5,
+            1.0,
+            1.0,
+        ),
+    ];
+    parts.push(AppendagePart {
+        z: if roll_mix > 0.35 { 2 } else { -1 },
+        kind: PartKind::Fluke,
+        pts: (0..3)
+            .map(|i| lerp_node(fluke_upper_side[i], fluke_upper_top[i], roll_mix))
+            .collect(),
+    });
+
+    let fluke_lower_side = [
+        pt_node(tail_root.x, tail_root.y + 1.0, tail_root.r * 0.95, 0.0),
+        pt_node(
+            tail_root.x - dir * f_len * 0.50,
+            tail_root.y + f_len * 0.16 + fluke_whip * 0.5,
+            max_radius * 0.28,
+            0.5,
+        ),
+        pt_node(
+            tail_root.x - dir * f_len * 1.05,
+            tail_root.y + f_len * 0.32 + fluke_whip,
+            0.9,
+            1.0,
+        ),
+    ];
+    let fluke_lower_top = [
+        pt_node(tail_root.x, tail_root.y + 1.5, max_radius * 0.26, 0.0),
+        pt_node(
+            tail_root.x - dir * f_len * 0.55,
+            tail_root.y + f_len * 0.46 + fluke_whip * 0.25,
+            max_radius * 0.34,
+            0.5,
+        ),
+        pt_node(
+            tail_root.x - dir * f_len * 1.05,
+            tail_root.y + f_len * 0.68 + fluke_whip * 0.5,
+            1.0,
+            1.0,
+        ),
+    ];
+    parts.push(AppendagePart {
+        z: 2,
+        kind: PartKind::Fluke,
+        pts: (0..3)
+            .map(|i| lerp_node(fluke_lower_side[i], fluke_lower_top[i], roll_mix))
+            .collect(),
+    });
+
+    // --- 6. Split Crimson Head Scoop during 3/4 Banking Dive ---
+    if dive_arch > 0.25 && bio.female_phase > 0.2 {
+        let snout = get_pt(0.03);
+        let s_len = max_radius * 1.45 * bio.female_phase * dive_arch;
+        parts.push(AppendagePart {
+            z: -2,
+            kind: PartKind::CrimsonScoop,
+            pts: vec![
+                pt_node(snout.x - dir * 3.0, snout.y, max_radius * 0.46, 0.0),
+                pt_node(
+                    snout.x + dir * s_len * 0.50,
+                    snout.y - s_len * 0.14,
+                    max_radius * 0.54,
+                    0.5,
+                ),
+                pt_node(
+                    snout.x + dir * s_len * 0.88,
+                    snout.y - s_len * 0.24,
+                    max_radius * 0.34,
                     1.0,
                 ),
             ],
         });
-
-        if view == CameraView::Dive && bio.female_phase > 0.2 {
-            let snout = get_pt(0.03);
-            let s_len = max_radius * 1.65 * bio.female_phase;
-            parts.push(AppendagePart {
-                z: -2,
-                kind: PartKind::CrimsonScoop,
-                pts: vec![
-                    pt_node(snout.x - 4.0, snout.y, max_radius * 0.50, 0.0),
-                    pt_node(snout.x + s_len * 0.55, snout.y - s_len * 0.12, max_radius * 0.62, 0.5),
-                    pt_node(snout.x + s_len * 0.95, snout.y - s_len * 0.22, max_radius * 0.38, 1.0),
-                ],
-            });
-        }
     }
 
     (spine, parts)
