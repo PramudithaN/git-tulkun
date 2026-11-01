@@ -1088,7 +1088,15 @@ fn paint_metrics_hud(
         }
         lang_x += 5;
         let short_name = lang.name.chars().take(8).collect::<String>();
-        draw_pixel_string(rgba_pixels, w, h, lang_x, line3_y, &short_name, coat.cream[2]);
+        draw_pixel_string(
+            rgba_pixels,
+            w,
+            h,
+            lang_x,
+            line3_y,
+            &short_name,
+            coat.cream[2],
+        );
         lang_x += (short_name.len() as u32) * 4 + 6;
     }
 }
