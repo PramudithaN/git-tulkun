@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>git-tulkun | Interactive GitHub README Whale Generator</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -30,6 +32,7 @@
     <header class="flex flex-wrap items-center justify-between gap-4 border-b border-[#30363d] pb-5">
       <div>
         <div class="flex items-center gap-2.5">
+          <img src="favicon.png" alt="git-tulkun logo" class="w-8 h-8 rounded-lg shadow-sm image-rendering-pixelated" style="image-rendering: pixelated;" />
           <h1 class="text-2xl font-bold tracking-tight text-white">git-tulkun</h1>
           <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#1f6feb]/20 text-[#58a6ff] border border-[#1f6feb]/40">v1.1</span>
         </div>
@@ -52,7 +55,7 @@
       <div>
         <label class="text-xs font-semibold text-[#8b949e] block mb-1.5">GitHub Username</label>
         <div class="flex gap-2">
-          <input id="userInput" type="text" value="PramudithaN" placeholder="e.g. PramudithaN" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
+          <input id="userInput" type="text" value="" placeholder="Enter GitHub username (e.g. torvalds)" class="w-full rounded-lg bg-[#0d1117] border border-[#30363d] px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#58a6ff]" />
           <button id="fetchUserBtn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#1f6feb] text-white hover:bg-[#388bfd] transition whitespace-nowrap">Load Avatar</button>
         </div>
       </div>
@@ -72,14 +75,14 @@
         <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-2">
             <span class="inline-block w-2 h-2 rounded-full bg-[#3fb950]"></span>
-            <span id="primaryCaption" class="font-semibold text-white text-sm">@PramudithaN (Stage 3: Adolescent Tulkun)</span>
+            <span id="primaryCaption" class="font-semibold text-white text-sm">Demo Whale Preview</span>
           </div>
           <span class="text-[#8b949e] font-mono">1280x560 High-Resolution 4x Pixel Art • Resets Jan 1st</span>
         </div>
         <div class="relative rounded-xl bg-[#0d1117] border border-[#30363d] p-4 flex justify-center min-h-[220px] items-center">
-          <div id="primaryLoader" class="absolute inset-0 rounded-xl bg-[#0d1117]/95 flex flex-col items-center justify-center gap-3 z-10 transition-opacity duration-200">
+          <div id="primaryLoader" class="absolute inset-0 rounded-xl bg-[#0d1117]/95 flex flex-col items-center justify-center gap-3 z-10 transition-opacity duration-200 hidden">
             <div class="w-8 h-8 rounded-full border-2 border-[#30363d] border-t-[#58a6ff] animate-spin"></div>
-            <span id="primaryLoaderText" class="text-xs font-medium text-[#8b949e]">Loading @PramudithaN's Tulkun avatar...</span>
+            <span id="primaryLoaderText" class="text-xs font-medium text-[#8b949e]">Loading Tulkun avatar...</span>
           </div>
           <canvas id="mainCanvas" width="1280" height="560" class="w-full max-w-[820px] h-auto"></canvas>
         </div>
@@ -594,8 +597,8 @@
       ctx.putImageData(outImg, 0, 0);
     }
 
-    let primaryUser = "PramudithaN";
-    let primaryCommits = 1072;
+    let primaryUser = "";
+    let primaryCommits = 800;
     let primaryCoat = buildCoatFromColors();
     let friendUser = "";
     let friendCommits = 350;
@@ -619,15 +622,18 @@ jobs:
     steps:
       - uses: PramudithaN/git-tulkun@v1`;
 
+      const userTag = primaryUser || "YOUR_USERNAME";
       const md = `<p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
-    <img src="https://raw.githubusercontent.com/${primaryUser}/${primaryUser}/output/tulkun/tulkun.gif" width="640" alt="${primaryUser}'s git-tulkun" />
+    <img src="https://raw.githubusercontent.com/${userTag}/${userTag}/output/tulkun/tulkun.gif" width="640" alt="${userTag}'s git-tulkun" />
   </a>
 </p>`;
 
       document.getElementById("yamlCode").textContent = yaml;
       document.getElementById("mdCode").textContent = md;
-      document.getElementById("primaryCaption").textContent = `@${primaryUser} (${getStageTitle(primaryCommits)} • ${primaryCommits} contributions)`;
+      document.getElementById("primaryCaption").textContent = primaryUser 
+        ? `@${primaryUser} (${getStageTitle(primaryCommits)} • ${primaryCommits} contributions)`
+        : `Demo Whale Preview (${getStageTitle(primaryCommits)} • ${primaryCommits} contributions)`;
     }
 
     function setLoaderVisible(isFriend, visible, login = "") {
@@ -775,7 +781,7 @@ jobs:
       // Crisp high-resolution header text
       sctx.fillStyle = "#f0f6fc";
       sctx.font = "bold 24px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
-      sctx.fillText(`git-tulkun  |  @${primaryUser}`, 40, 60);
+      sctx.fillText(primaryUser ? `git-tulkun  |  @${primaryUser}` : `git-tulkun  |  Demo Preview`, 40, 60);
 
       sctx.fillStyle = "#58a6ff";
       sctx.font = "600 22px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
@@ -799,7 +805,7 @@ jobs:
       }
 
       const a = document.createElement("a");
-      a.download = `${primaryUser}-tulkun-share-card.png`;
+      a.download = `${primaryUser || "demo"}-tulkun-share-card.png`;
       a.href = shareCanvas.toDataURL("image/png");
       a.click();
     });
@@ -814,7 +820,6 @@ jobs:
     }
 
     updateSnippets();
-    fetchGitHubProfile("PramudithaN", false);
     animate();
   </script>
 </body>
