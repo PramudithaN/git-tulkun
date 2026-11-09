@@ -216,7 +216,7 @@ def render_showcase_md(members: list[dict], total_swimmers: int) -> str:
         "",
         "| Developer | Profile Repository | Live Animated Tulkun |",
         "| :--- | :--- | :---: |",
-        f'| <a href="https://github.com/{REPO_OWNER}"><img src="https://github.com/{REPO_OWNER}.png?size=64" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{REPO_OWNER}</strong></a> *(Creator)* | [`{REPO_OWNER}/{REPO_NAME}`](https://github.com/{REPO_OWNER}/{REPO_NAME}) | <a href="https://github.com/{REPO_OWNER}"><img src="tulkun/tulkun.gif?v=9" width="380" alt="@{REPO_OWNER}\'s live Tulkun" /></a> |',
+        f'| <a href="https://github.com/{REPO_OWNER}"><img src="https://github.com/{REPO_OWNER}.png?size=64" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{REPO_OWNER}</strong></a> *(Creator)* | [`{REPO_OWNER}/{REPO_NAME}`](https://github.com/{REPO_OWNER}/{REPO_NAME}) | <a href="https://github.com/{REPO_OWNER}"><img src="https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/output/tulkun/tulkun.gif" width="380" alt="@{REPO_OWNER}\'s live Tulkun" /></a> |',
     ]
 
     for m in live_members:
@@ -292,7 +292,7 @@ def render_discussion_body(members: list[dict], total_swimmers: int) -> str:
     """Render the body content for GitHub Discussion #4."""
     live_members = [m for m in members if m["has_gif"]]
     rows = [
-        f'| <a href="https://github.com/{REPO_OWNER}"><img src="https://github.com/{REPO_OWNER}.png?size=64" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{REPO_OWNER}</strong></a> *(Creator)* | [`{REPO_OWNER}/{REPO_NAME}`](https://github.com/{REPO_OWNER}/{REPO_NAME}) | <a href="https://github.com/{REPO_OWNER}"><img src="https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/tulkun/tulkun.gif" width="360" alt="@{REPO_OWNER}\'s live Tulkun" /></a> |'
+        f'| <a href="https://github.com/{REPO_OWNER}"><img src="https://github.com/{REPO_OWNER}.png?size=64" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{REPO_OWNER}</strong></a> *(Creator)* | [`{REPO_OWNER}/{REPO_NAME}`](https://github.com/{REPO_OWNER}/{REPO_NAME}) | <a href="https://github.com/{REPO_OWNER}"><img src="https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/output/tulkun/tulkun.gif" width="360" alt="@{REPO_OWNER}\'s live Tulkun" /></a> |'
     ]
 
     for m in live_members:

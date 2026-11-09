@@ -4,10 +4,10 @@ A procedural pixel-art **Tulkun** leviathan for your GitHub profile `README.md` 
 
 <p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
-    <img src="tulkun/tulkun.gif?v=9" width="640" alt="Live git-tulkun rendered from @PramudithaN's GitHub activity" />
+    <img src="https://raw.githubusercontent.com/PramudithaN/git-tulkun/output/tulkun/tulkun.gif?v=10" width="640" alt="Live git-tulkun rendered from @PramudithaN's GitHub activity" />
   </a>
   <br />
-  <em>Live <code>git-tulkun</code> generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s current-year GitHub activity (1,072 contributions - Stage 3: Adolescent Tulkun)</em>
+  <em>Live <code>git-tulkun</code> generated from <a href="https://github.com/PramudithaN">@PramudithaN</a>'s current-year GitHub activity (Stage 4: Mature Tulkun)</em>
 </p>
 
 ## Quick Start (1-Step Setup)
@@ -64,7 +64,7 @@ Every workflow run automatically generates a `1280×640` social card at **`tulku
 
 <p align="center">
   <a href="https://github.com/PramudithaN/git-tulkun">
-    <img src="tulkun/share-card.png?v=9" width="640" alt="Your Tulkun This Year Share Card (1280x640)" />
+    <img src="https://raw.githubusercontent.com/PramudithaN/git-tulkun/output/tulkun/share-card.png?v=10" width="640" alt="Your Tulkun This Year Share Card (1280x640)" />
   </a>
 </p>
 
