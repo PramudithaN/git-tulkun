@@ -69,7 +69,7 @@ Every workflow run automatically generates a `1280×640` social card at **`tulku
 </p>
 
 - **Compare Whales Side-by-Side**: Enter two GitHub usernames in the [Interactive Whale Comparator](https://pramudithan.github.io/git-tulkun/) to compare stages, spine length, and language colors.
-- **Join the Community Pod**: Add your Tulkun to [`SHOWCASE.md`](SHOWCASE.md) via a Pull Request.
+- **Join the Community Pod**: Anyone using `git-tulkun` in their public workflow is automatically featured in [`SHOWCASE.md`](SHOWCASE.md)!
 
 ---
 
