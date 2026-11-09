@@ -60,7 +60,7 @@ jobs:
 </p>
 ```
 
-Our automated daily workflow scans for public workflows using `git-tulkun` and adds your whale to this showcase automatically! 🐋
+Our automated weekly workflow scans for public workflows using `git-tulkun` and adds your whale to this showcase automatically! 🐋
 
 ---
 *Maintained automatically by [`.github/workflows/showcase.yml`](.github/workflows/showcase.yml).*

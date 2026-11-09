@@ -2,8 +2,8 @@ name: Update Community Showcase
 
 on:
   schedule:
-    # Runs daily at 01:30 UTC
-    - cron: "30 1 * * *"
+    # Runs weekly on Sundays at 01:30 UTC
+    - cron: "30 1 * * 0"
   workflow_dispatch:
 
 permissions:

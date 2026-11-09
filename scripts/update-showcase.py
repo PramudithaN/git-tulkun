@@ -278,7 +278,7 @@ def render_showcase_md(members: list[dict], total_swimmers: int) -> str:
         "</p>",
         "```",
         "",
-        "Our automated daily workflow scans for public workflows using `git-tulkun` and adds your whale to this showcase automatically! 🐋",
+        "Our automated weekly workflow scans for public workflows using `git-tulkun` and adds your whale to this showcase automatically! 🐋",
         "",
         "---",
         f"*Maintained automatically by [`.github/workflows/showcase.yml`](.github/workflows/showcase.yml).*",
@@ -326,7 +326,7 @@ Currently featuring **{total_swimmers} swimmers** roaming the GitHub sea!
 
 ## Add Your Tulkun to the Pod
 
-Once you've added `git-tulkun` to your profile repository (`<username>/<username>`), our automated daily scanner will **automatically detect your workflow and add you to this pod table and [SHOWCASE.md](https://github.com/{REPO_OWNER}/{REPO_NAME}/blob/main/SHOWCASE.md)**!
+Once you've added `git-tulkun` to your profile repository (`<username>/<username>`), our automated weekly scanner will **automatically detect your workflow and add you to this pod table and [SHOWCASE.md](https://github.com/{REPO_OWNER}/{REPO_NAME}/blob/main/SHOWCASE.md)**!
 
 You can also reply to this discussion with:
 
