@@ -288,6 +288,163 @@ def render_showcase_md(members: list[dict], total_swimmers: int) -> str:
     return "\n".join(content)
 
 
+def render_discussion_body(members: list[dict], total_swimmers: int) -> str:
+    """Render the body content for GitHub Discussion #4."""
+    live_members = [m for m in members if m["has_gif"]]
+    rows = [
+        f'| <a href="https://github.com/{REPO_OWNER}"><img src="https://github.com/{REPO_OWNER}.png?size=64" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{REPO_OWNER}</strong></a> *(Creator)* | [`{REPO_OWNER}/{REPO_NAME}`](https://github.com/{REPO_OWNER}/{REPO_NAME}) | <a href="https://github.com/{REPO_OWNER}"><img src="https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/main/tulkun/tulkun.gif" width="360" alt="@{REPO_OWNER}\'s live Tulkun" /></a> |'
+    ]
+
+    for m in live_members:
+        owner = m["owner"]
+        repo = m["repo"]
+        gif_url = m["gif_url"]
+        avatar_url = f"https://github.com/{owner}.png?size=64"
+        row = (
+            f'| <a href="{m["profile_url"]}"><img src="{avatar_url}" width="36" height="36" style="border-radius:50%;" /><br/><strong>@{owner}</strong></a> '
+            f'| [`{repo}`]({m["repo_url"]}) '
+            f'| <a href="{m["profile_url"]}"><img src="{gif_url}" width="360" alt="@{owner}\'s Tulkun" /></a> |'
+        )
+        rows.append(row)
+
+    table_md = "\n".join(rows)
+
+    return f"""# 🐋 Community Tulkun Pod
+
+A living ocean gallery of procedurally generated **Tulkun** leviathans swimming across GitHub profile READMEs.
+Currently featuring **{total_swimmers} swimmers** roaming the GitHub sea!
+
+---
+
+## Featured Community Tulkuns
+
+| Developer | Profile Repository | Live Tulkun |
+| :--- | :--- | :---: |
+{table_md}
+
+---
+
+## Add Your Tulkun to the Pod
+
+Once you've added `git-tulkun` to your profile repository (`<username>/<username>`), our automated daily scanner will **automatically detect your workflow and add you to this pod table and [SHOWCASE.md](https://github.com/{REPO_OWNER}/{REPO_NAME}/blob/main/SHOWCASE.md)**!
+
+You can also reply to this discussion with:
+
+1. 🎞️ **Your GIF**: drag and drop `tulkun/tulkun.gif` into your comment
+2. 🐋 **Your stage**: Calf, Yearling, Adolescent, Mature, or Adult Male Bull
+3. 💻 **Your top languages**: they tint your whale!
+4. 🎥 *(Optional)* Your camera view (`side`, `dive`, `top`) and whether you used `canon`
+
+---
+
+## New here?
+
+Set up your own Tulkun in 3 steps with the [README guide](https://github.com/{REPO_OWNER}/{REPO_NAME}#quick-start-1-step-setup).
+
+⭐ Enjoying GitTulkun? A star helps other developers find it!"""
+
+
+def update_github_discussion(token: str, members: list[dict], total_swimmers: int, discussion_num: int = 4):
+    """Update GitHub Discussion #4 using GraphQL API."""
+    print(f"Syncing Community Pod to Discussion #{discussion_num}...")
+    new_body = render_discussion_body(members, total_swimmers)
+
+    # 1. Fetch Discussion node ID
+    query_id = """
+    query($owner: String!, $name: String!, $num: Int!) {
+      repository(owner: $owner, name: $name) {
+        discussion(number: $num) {
+          id
+        }
+      }
+    }
+    """
+    mutation_update = """
+    mutation($id: ID!, $body: String!) {
+      updateDiscussion(input: { discussionId: $id, body: $body }) {
+        discussion {
+          id
+          url
+          updatedAt
+        }
+      }
+    }
+    """
+
+    discussion_id = None
+
+    # Try GraphQL API via urllib or gh CLI
+    if token:
+        try:
+            req_data = json.dumps({
+                "query": query_id,
+                "variables": {"owner": REPO_OWNER, "name": REPO_NAME, "num": discussion_num}
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api.github.com/graphql",
+                data=req_data,
+                headers={"Authorization": f"Bearer {token}", "User-Agent": "git-tulkun-updater"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                discussion_id = result.get("data", {}).get("repository", {}).get("discussion", {}).get("id")
+        except Exception as e:
+            print(f"Notice: Direct GraphQL fetch failed ({e}); trying gh CLI fallback...")
+
+    if not discussion_id:
+        try:
+            res = subprocess.run(
+                ["gh", "api", "graphql", "-F", f"owner={REPO_OWNER}", "-F", f"name={REPO_NAME}", "-F", f"num={discussion_num}", "-f", f"query={query_id}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            data = json.loads(res.stdout)
+            discussion_id = data.get("data", {}).get("repository", {}).get("discussion", {}).get("id")
+        except Exception as e:
+            print(f"Warning: Could not fetch Discussion #{discussion_num} ID: {e}")
+            return
+
+    if not discussion_id:
+        print(f"Could not find discussion ID for Discussion #{discussion_num}.")
+        return
+
+    # 2. Update Discussion body
+    updated = False
+    if token:
+        try:
+            req_data = json.dumps({
+                "query": mutation_update,
+                "variables": {"id": discussion_id, "body": new_body}
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api.github.com/graphql",
+                data=req_data,
+                headers={"Authorization": f"Bearer {token}", "User-Agent": "git-tulkun-updater"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                res_json = json.loads(resp.read().decode("utf-8"))
+                if "errors" in res_json:
+                    print(f"GraphQL update errors: {res_json['errors']}")
+                else:
+                    updated = True
+                    print(f"Successfully updated Discussion #{discussion_num} via GraphQL API!")
+        except Exception as e:
+            print(f"Notice: Direct GraphQL mutation failed ({e}); trying gh CLI fallback...")
+
+    if not updated:
+        try:
+            subprocess.run(
+                ["gh", "api", "graphql", "-F", f"id={discussion_id}", "-F", f"body={new_body}", "-f", f"query={mutation_update}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            print(f"Successfully updated Discussion #{discussion_num} via gh CLI!")
+        except Exception as e:
+            print(f"Warning: Could not update Discussion #{discussion_num}: {e}")
+
+
 def main():
     print("=== Updating Community Pod Showcase ===")
     token = get_github_token()
@@ -300,6 +457,10 @@ def main():
     showcase_content = render_showcase_md(members, total_swimmers)
     SHOWCASE_PATH.write_text(showcase_content, encoding="utf-8")
     print(f"Wrote {SHOWCASE_PATH}")
+
+    # Synchronize GitHub Discussion #4
+    update_github_discussion(token, members, total_swimmers, discussion_num=4)
+
     print("Showcase update complete!")
 
 
